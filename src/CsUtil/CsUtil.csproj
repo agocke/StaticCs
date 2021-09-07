@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>CsUtil</RootNamespace>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-</Project>
