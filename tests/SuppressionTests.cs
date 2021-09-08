@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using CsUtil.Analyzers;
+using StaticCs.Analyzers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
 using Xunit;
 
-namespace CsUtil
+namespace StaticCs
 {
     public class AnalyzerTests
     {

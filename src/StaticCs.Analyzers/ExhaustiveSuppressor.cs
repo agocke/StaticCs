@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace CsUtil.Analyzers
+namespace StaticCs.Analyzers
 {
     [DiagnosticAnalyzer("CSharp")]
     public sealed class ExhaustiveSuppressor : DiagnosticSuppressor
@@ -48,7 +48,8 @@ namespace CsUtil.Analyzers
 
         private static bool ChecksAllCases(ITypeSymbol switchType, SeparatedSyntaxList<SwitchExpressionArmSyntax> arms, SemanticModel model)
         {
-            var enumFieldMembers = new HashSet<ISymbol>(switchType.GetMembers().Where(m => m.Kind == SymbolKind.Field));
+            var enumFieldMembers = new HashSet<ISymbol>(switchType.GetMembers().Where(m => m.Kind == SymbolKind.Field),
+                SymbolEqualityComparer.Default);
             foreach (var arm in arms)
             {
                 if (arm.WhenClause is not null)

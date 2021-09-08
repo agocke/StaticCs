@@ -1,7 +1,7 @@
 
 using System;
 
-namespace CsUtil
+namespace StaticCs
 {
     [AttributeUsage(AttributeTargets.Enum)]
     internal sealed class ClosedAttribute : Attribute

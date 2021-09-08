@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\CsUtil.Analyzers\CsUtil.Analyzers.csproj" />
+    <ProjectReference Include="..\src\StaticCs.Analyzers\StaticCs.Analyzers.csproj" />
   </ItemGroup>
 
 </Project>
