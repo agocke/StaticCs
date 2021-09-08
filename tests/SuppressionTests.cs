@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using CsUtil.Analyzer;
+using CsUtil.Analyzers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -43,7 +43,7 @@ DiagnosticResult.CompilerWarning("CS8524").WithSpan(7, 33, 7, 39).WithArguments(
         }
 
         [Fact]
-        public Task TestEnumWithClosed()
+        public Task TestCompleteEnumWithClosed()
         {
             var src = @"
 using System;
@@ -68,6 +68,35 @@ enum Rgb
 }
 class ClosedAttribute : Attribute {}";
             return VerifyDiagnostics(src);
+        }
+
+        [Fact]
+        public Task TestInCompleteEnumWithClosed()
+        {
+            var src = @"
+using System;
+class C
+{
+    public void M(Rgb color)
+    {
+        Console.WriteLine(color switch
+        {
+            Rgb.Red => 0,
+            Rgb.Green => 1,
+        });
+    }
+}
+[Closed]
+enum Rgb
+{
+    Red,
+    Green,
+    Blue
+}
+class ClosedAttribute : Attribute {}";
+            return VerifyDiagnostics(src,
+            // /0/Test0.cs(7,33): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern 'Rgb.Blue' is not covered.
+            DiagnosticResult.CompilerWarning("CS8509").WithSpan(7, 33, 7, 39).WithArguments("Rgb.Blue"));
         }
 
         private Task VerifyDiagnostics(string src, params DiagnosticResult[] diagnostics)

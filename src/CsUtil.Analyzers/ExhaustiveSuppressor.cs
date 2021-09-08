@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace CsUtil.Analyzer
+namespace CsUtil.Analyzers
 {
     [DiagnosticAnalyzer("CSharp")]
     public sealed class ExhaustiveSuppressor : DiagnosticSuppressor
@@ -27,8 +29,10 @@ namespace CsUtil.Analyzer
                     if (node is SwitchExpressionSyntax switchExpr)
                     {
                         var expr = switchExpr.GoverningExpression;
-                        var typeInfo = model.GetTypeInfo(expr);
-                        if (typeInfo.Type is not null && IsClosedEnum(typeInfo.Type))
+                        var switchType = model.GetTypeInfo(expr).Type;
+                        if (switchType is not null &&
+                            IsClosedEnum(switchType) &&
+                            ChecksAllCases(switchType, switchExpr.Arms, model))
                         {
                             context.ReportSuppression(Suppression.Create(SupportedSuppressions[0], diag));
                         }
@@ -40,6 +44,28 @@ namespace CsUtil.Analyzer
         private static bool IsClosedEnum(ITypeSymbol type)
         {
             return type.TypeKind == TypeKind.Enum && HasClosedAttribute(type.GetAttributes());
+        }
+
+        private static bool ChecksAllCases(ITypeSymbol switchType, SeparatedSyntaxList<SwitchExpressionArmSyntax> arms, SemanticModel model)
+        {
+            var enumFieldMembers = new HashSet<ISymbol>(switchType.GetMembers().Where(m => m.Kind == SymbolKind.Field));
+            foreach (var arm in arms)
+            {
+                if (arm.WhenClause is not null)
+                {
+                    return false;
+                }
+                if (arm.Pattern is not ConstantPatternSyntax constantPattern)
+                {
+                    return false;
+                }
+                var patternSymbol = model.GetSymbolInfo(constantPattern.Expression).Symbol;
+                if (patternSymbol is not null)
+                {
+                    enumFieldMembers.Remove(patternSymbol);
+                }
+            }
+            return enumFieldMembers.Count == 0;
         }
 
         private static bool HasClosedAttribute(ImmutableArray<AttributeData> attributes)
