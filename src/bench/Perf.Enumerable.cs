@@ -2,12 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using FastEnum;
 using MicroBenchmarks;
+using static System.Linq.Tests.LinqTestData;
 
 namespace System.Linq.Tests
 {
@@ -60,8 +62,8 @@ namespace System.Linq.Tests
         [Benchmark]
         public void WhereSelectFastList()
         {
-            var list = new ListWrap<int>((List<int>)LinqTestData.List.Collection);
-            WhereSelectFast<ListWrap<int>, int>(list);
+            var list = new IListWrap<int>((List<int>)LinqTestData.List.Collection);
+            WhereSelectFast<IListWrap<int>, int>(list);
         }
 
         [Benchmark]
@@ -71,7 +73,43 @@ namespace System.Linq.Tests
             WhereSelectFast<FastEnum.FastEnum.FastRange, int>(fastEnum);
         }
 
-        private readonly struct ArrayWrap<T> : IEnumerable<ArrayWrap<T>, T, int>
+        [Benchmark]
+        public void WhereSelectFastList()
+        {
+            var list = (ListWrapper<int>)LinqTestData.List.Collection;
+            WhereSelectFast<ListWrapper<int>, int>(list);
+        }
+
+        [Benchmark]
+        public void WhereSelectFastIList()
+        {
+            var list = new IListWrap<List<int>, int>((List<int>)LinqTestData.List.Collection);
+            WhereSelectFast<IListWrap<List<int>, int>, int>(list);
+        }
+
+        private record struct ArrayEnumeratorWrap<T>(T[] Array) : IEnumerator<T>
+        {
+            private int _index = 0;
+            public T Current => Array[_index];
+
+            object IEnumerator.Current => throw new NotImplementedException();
+
+            public void Dispose()
+            {
+            }
+
+            public bool MoveNext()
+            {
+                return _index++ == Array.Length;
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private sealed class ArrayWrap<T> : IEnumerable<T, ArrayEnumeratorWrap<T>>, IEnumerable<ArrayWrap<T>, T, int>
         {
             private readonly T[] _a;
             public ArrayWrap(T[] a)
@@ -79,7 +117,12 @@ namespace System.Linq.Tests
                 _a = a;
             }
 
-            public static int Start => 0;
+            public int Start => 0;
+
+            public ArrayEnumeratorWrap<T> GetEnumerator()
+            {
+                return new ArrayEnumeratorWrap<T>(_a);
+            }
 
             public bool TryGetNext(ref int index, [MaybeNullWhen(false)] out T item)
             {

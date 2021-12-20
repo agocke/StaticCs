@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace System.Linq.Tests
 {
@@ -14,7 +15,7 @@ namespace System.Linq.Tests
         private static readonly int[] _arrayOf100Integers = Enumerable.Range(0, Size).ToArray();
 
         internal static readonly LinqTestData Array = new LinqTestData(_arrayOf100Integers);
-        internal static readonly LinqTestData List = new LinqTestData(new List<int>(_arrayOf100Integers));
+        internal static readonly LinqTestData List = new LinqTestData(new ListWrapper<int>(_arrayOf100Integers));
         internal static readonly LinqTestData Range = new LinqTestData(Enumerable.Range(0, Size));
         internal static readonly LinqTestData IEnumerable = new LinqTestData(new IEnumerableWrapper<int>(_arrayOf100Integers));
         internal static readonly LinqTestData IList = new LinqTestData(new IListWrapper<int>(_arrayOf100Integers));
@@ -44,6 +45,24 @@ namespace System.Linq.Tests
                     return "IOrderedEnumerable";
                 default:
                     return "IEnumerable";
+            }
+        }
+
+        public sealed class ListWrapper<T> : List<T>, FastEnum.IEnumerable<ListWrapper<T>, T, int>
+        {
+            public ListWrapper(T[] array) : base(array) { }
+            public int Start => 0;
+
+            public bool TryGetNext(ref int index, [MaybeNullWhen(false)] out T item)
+            {
+                if (index >= Count)
+                {
+                    item = default(T);
+                    return false;
+                }
+
+                item = this[index++];
+                return true;
             }
         }
 

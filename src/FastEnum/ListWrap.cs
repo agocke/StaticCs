@@ -3,18 +3,24 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace FastEnum
 {
-    public record ListWrap<T>(List<T> Value) : IEnumerable<ListWrap<T>, T, int>
+    public readonly struct IListWrap<TList, T> : IEnumerable<IListWrap<TList, T>, T, int>
+        where TList : IList<T>
     {
-        public static int Start => 0;
+        private readonly TList _list;
+        public IListWrap(TList list)
+        {
+            _list = list;
+        }
+        public int Start => 0;
 
         public bool TryGetNext(ref int index, [MaybeNullWhen(false)] out T item)
         {
-            if (index >= Value.Count) { 
+            if (index >= _list.Count) {
                 item = default(T);
                 return false;
             }
-            
-            item = Value[index++];
+
+            item = _list[index++];
             return true;
         }
     }

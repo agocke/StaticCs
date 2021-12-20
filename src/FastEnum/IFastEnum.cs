@@ -13,10 +13,15 @@ namespace FastEnum
             where TEnum : IEnumerable<TEnum, T, TIter>
             => new IEnumerable<TEnum, T, TIter>.SelectImpl<U>(e, map);
     }
+    public interface IEnumerable<T, TEnumerator>
+        where TEnumerator : IEnumerator<T>
+    {
+        TEnumerator GetEnumerator();
+    }
     public interface IEnumerable<TEnum, T, TIterator>
         where TEnum : IEnumerable<TEnum, T, TIterator>
     {
-        abstract static TIterator Start { get; }
+        TIterator Start { get; }
         bool TryGetNext(ref TIterator iter, [MaybeNullWhen(false)] out T item);
 
         public struct WhereImpl : IEnumerable<WhereImpl, T, TIterator>
@@ -30,7 +35,7 @@ namespace FastEnum
                 _pred = pred;
             }
 
-            public static TIterator Start => TEnum.Start;
+            public TIterator Start => _e.Start;
 
             public bool TryGetNext(ref TIterator iter, [MaybeNullWhen(false)] out T item)
             {
@@ -50,7 +55,7 @@ namespace FastEnum
             private TEnum _e;
             private readonly Func<T, U> _map;
 
-            public static TIterator Start => TEnum.Start;
+            public TIterator Start => _e.Start;
 
             public SelectImpl(TEnum e, Func<T, U> map)
             {
