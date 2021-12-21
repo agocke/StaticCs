@@ -8,14 +8,14 @@ namespace FastEnum
         public readonly struct FastRange : IEnumerable<FastRange, int, int>
         {
             private readonly int _start;
-            private readonly int _count; 
+            private readonly int _count;
             public FastRange(int start, int count)
             {
                 _start = start;
                 _count = count;
             }
 
-            static int IEnumerable<FastRange, int, int>.Start => 0;
+            int IEnumerable<FastRange, int, int>.Start => 0;
 
             bool IEnumerable<FastRange, int, int>.TryGetNext(ref int index, out int item)
             {

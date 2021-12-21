@@ -5,6 +5,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using FastEnum;
@@ -53,63 +54,55 @@ namespace System.Linq.Tests
         public void Where(LinqTestData input) => input.Collection.Where(i => i >= 0).Consume(_consumer);
 
         [Benchmark]
+        public void WhereFastArray()
+        {
+            var array = new ArrayWrap<int>((int[])LinqTestData.Array.Collection);
+            WhereFast<ArrayWrap<int>, ArrayFastEnum<int>>(array);
+        }
+
+        [Benchmark]
         public void WhereSelectFastArray()
         {
             var array = new ArrayWrap<int>((int[])LinqTestData.Array.Collection);
-            WhereSelectFast<ArrayWrap<int>, int>(array);
+            WhereSelectFast(array.GetEnumerator());
+        }
+
+        [Benchmark]
+        public void WhereSelectFastArray2()
+        {
+            var array = new ArrayWrap<int>((int[])LinqTestData.Array.Collection);
+            WhereSelectFast<ArrayWrap<int>, ArrayFastEnum<int>>(array);
+        }
+
+        [Benchmark]
+        public void WhereSelectFastArray3()
+        {
+            var array = new ArrayWrap<int>((int[])LinqTestData.Array.Collection);
+            WhereSelectFast2<ArrayWrap<int>, ArrayFastEnum<int>>(array);
         }
 
         [Benchmark]
         public void WhereSelectFastList()
         {
-            var list = new IListWrap<int>((List<int>)LinqTestData.List.Collection);
-            WhereSelectFast<IListWrap<int>, int>(list);
+            var list = new ListWrap<int>((List<int>)LinqTestData.List.Collection);
+            //WhereSelectFast2<ListWrap<int>, int>(list);
         }
 
         [Benchmark]
         public void WhereSelectFastEnum()
         {
             var fastEnum = FastEnum.FastEnum.Range(0, LinqTestData.Size);
-            WhereSelectFast<FastEnum.FastEnum.FastRange, int>(fastEnum);
-        }
-
-        [Benchmark]
-        public void WhereSelectFastList()
-        {
-            var list = (ListWrapper<int>)LinqTestData.List.Collection;
-            WhereSelectFast<ListWrapper<int>, int>(list);
+            WhereSelectFast2<FastEnum.FastEnum.FastRange, int>(fastEnum);
         }
 
         [Benchmark]
         public void WhereSelectFastIList()
         {
             var list = new IListWrap<List<int>, int>((List<int>)LinqTestData.List.Collection);
-            WhereSelectFast<IListWrap<List<int>, int>, int>(list);
+            WhereSelectFast2<IListWrap<List<int>, int>, int>(list);
         }
 
-        private record struct ArrayEnumeratorWrap<T>(T[] Array) : IEnumerator<T>
-        {
-            private int _index = 0;
-            public T Current => Array[_index];
-
-            object IEnumerator.Current => throw new NotImplementedException();
-
-            public void Dispose()
-            {
-            }
-
-            public bool MoveNext()
-            {
-                return _index++ == Array.Length;
-            }
-
-            public void Reset()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        private sealed class ArrayWrap<T> : IEnumerable<T, ArrayEnumeratorWrap<T>>, IEnumerable<ArrayWrap<T>, T, int>
+        private class ArrayWrap<T> : IEnumerable<T, ArrayFastEnum<T>>, IEnumerable<ArrayWrap<T>, T, ArrayFastEnum<T>>
         {
             private readonly T[] _a;
             public ArrayWrap(T[] a)
@@ -117,29 +110,72 @@ namespace System.Linq.Tests
                 _a = a;
             }
 
-            public int Start => 0;
+            public ArrayFastEnum<T> Start => GetEnumerator();
 
-            public ArrayEnumeratorWrap<T> GetEnumerator()
+            public ArrayFastEnum<T> GetEnumerator() => new ArrayFastEnum<T>(_a);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool TryGetNext(ref ArrayFastEnum<T> index, [MaybeNullWhen(false)] out T item)
             {
-                return new ArrayEnumeratorWrap<T>(_a);
+                return index.TryGetNext(out item);
             }
+        }
 
-            public bool TryGetNext(ref int index, [MaybeNullWhen(false)] out T item)
+        private struct ArrayFastEnum<T> : IFastEnumerator<T>
+        {
+            private readonly T[] _a;
+            private int _index;
+            public ArrayFastEnum(T[] a)
             {
-                if (index >= _a.Length)
+                _a = a;
+                _index = 0;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool TryGetNext([MaybeNullWhen(false)] out T item)
+            {
+                if (_index >= _a.Length)
                 {
-                    item = default(T);
+                    item = default;
                     return false;
                 }
-
-                item = _a[index++];
+                item = _a[_index++];
                 return true;
             }
         }
 
-        private void WhereSelectFast<TEnum, TIter>(TEnum e)
+        private void WhereFast<TEnumerable, TEnumerator>(TEnumerable e)
+            where TEnumerator : IFastEnumerator<int>
+            where TEnumerable : IEnumerable<int, TEnumerator>
+            => e.Where<int, TEnumerable, TEnumerator>(i => i >= 0)
+                .ConsumeFast<
+                    int,
+                    WhereEnumerable<int, TEnumerable, TEnumerator>,
+                    WhereEnumerator<int, TEnumerator>>(_consumer);
+
+        private void WhereSelectFast<TEnumerable, TEnumerator>(TEnumerable e)
+            where TEnumerable : IEnumerable<int, TEnumerator>
+            where TEnumerator : IFastEnumerator<int>
+            => e.Where<int, TEnumerable, TEnumerator>(i => i >= 0)
+                .Select<int, int, WhereEnumerable<int, TEnumerable, TEnumerator>, WhereEnumerator<int, TEnumerator>>(i => i + 1)
+                .ConsumeFast<int,
+                    SelectEnumerable<int, int, WhereEnumerable<int, TEnumerable, TEnumerator>, WhereEnumerator<int, TEnumerator>>,
+                    SelectEnumerator<int, int, WhereEnumerator<int, TEnumerator>>>(_consumer);
+
+        private void WhereSelectFast<TEnumerator>(TEnumerator e)
+            where TEnumerator : IFastEnumerator<int>
+            => e.Where<int, TEnumerator>(i => i >= 0)
+                .Select<int, int, WhereEnumerator<int, TEnumerator>>(i => i + 1)
+                .ConsumeFast<int,
+                    SelectEnumerator<int, int, WhereEnumerator<int, TEnumerator>>>(_consumer);
+
+        private void WhereSelectFast2<TEnum, TIter>(TEnum e)
             where TEnum : IEnumerable<TEnum, int, TIter>
-            => e.Where<TEnum, int, TIter>(i => i >= 0).Select<IEnumerable<TEnum, int, TIter>.WhereImpl, int, TIter, int>(i => i + 1).Consume(_consumer);
+            => e.Where<TEnum, int, TIter>(i => i >= 0)
+                .Select<IEnumerable<TEnum, int, TIter>.WhereImpl, int, TIter, int>(i => i + 1)
+                .Consume<
+                    IEnumerable<IEnumerable<TEnum, int, TIter>.WhereImpl, int, TIter>.SelectImpl<int>,
+                    int,
+                    TIter>(_consumer);
 
         // Where().Select() has 3 code paths: WhereSelectEnumerableIterator, WhereSelectArrayIterator, WhereSelectListIterator, exactly as Where
         // https://github.com/dotnet/corefx/blob/dcf1c8f51bcdbd79e08cc672e327d50612690a25/src/System.Linq/src/System/Linq/Where.cs

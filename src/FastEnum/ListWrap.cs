@@ -3,6 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace FastEnum
 {
+    public class ListWrap<T> : List<T>
+    {
+        public ListWrap(List<T> list) : base(list) { }
+    }
+
     public readonly struct IListWrap<TList, T> : IEnumerable<IListWrap<TList, T>, T, int>
         where TList : IList<T>
     {
