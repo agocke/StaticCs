@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\StaticCs.Attributes\StaticCs.Attributes.csproj" />
+    <ProjectReference Include="..\src\StaticCs\StaticCs.csproj" OutputItemType="Analyzer" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
