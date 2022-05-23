@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>StaticCS</PackageId>
+    <Version>0.1.0</Version>
+    <IsPackable>true</IsPackable>
+    <PackageOutputPath>$(ArtifactsPath)pack</PackageOutputPath>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
+    <!-- <PackageProjectUrl>https://commentout.com/static-cs</PackageProjectUrl> -->
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.0" />
+    <None Include="$(OutputPath)/StaticCs.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    <Content Include="../StaticCs.ContentFiles/*.cs" PackagePath="contentFiles/cs/any" />
+  </ItemGroup>
+
+</Project>
