@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>StaticCS</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <IsPackable>true</IsPackable>
     <PackageOutputPath>$(ArtifactsPath)pack</PackageOutputPath>
     <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
@@ -17,12 +17,17 @@
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.0" />
     <None Include="$(OutputPath)/StaticCs.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
-    <Content Include="../StaticCs.ContentFiles/*.cs" PackagePath="contentFiles/cs/any" />
+    <None Include="../StaticCs.ContentFiles/*.cs">
+      <Pack>true</Pack>
+      <PackagePath>contentFiles/cs/any</PackagePath>
+      <BuildAction>compile</BuildAction>
+    </None>
   </ItemGroup>
 
 </Project>
