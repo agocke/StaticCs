@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\src\StaticCs.Attributes\StaticCs.Attributes.csproj" />
+    <Compile Include="..\src\StaticCs.ContentFiles\*.cs" />
     <ProjectReference Include="..\src\StaticCs\StaticCs.csproj" OutputItemType="Analyzer" />
   </ItemGroup>
 
