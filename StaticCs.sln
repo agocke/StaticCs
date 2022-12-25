@@ -11,6 +11,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StaticCs.Attributes", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{17308D71-3C07-4542-9531-74F1D2E2FCDE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DependencyInjection", "DependencyInjection", "{880CD3A4-5DE6-439C-9445-DB27CCAEB838}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StaticCs.DependencyInjection", "src\DependencyInjection\StaticCs.DependencyInjection\StaticCs.DependencyInjection.csproj", "{923E1734-4EF2-4E19-B30A-D606644A6EA8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.Tests", "src\DependencyInjection\Tests\DependencyInjection.Tests.csproj", "{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,9 +38,20 @@ Global
 		{17308D71-3C07-4542-9531-74F1D2E2FCDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{17308D71-3C07-4542-9531-74F1D2E2FCDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17308D71-3C07-4542-9531-74F1D2E2FCDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{923E1734-4EF2-4E19-B30A-D606644A6EA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{923E1734-4EF2-4E19-B30A-D606644A6EA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{923E1734-4EF2-4E19-B30A-D606644A6EA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{923E1734-4EF2-4E19-B30A-D606644A6EA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6842C51A-52C3-4ECA-8DDF-A2F3373AF0AE} = {F0F918FD-6747-4A0B-8EE2-D7F52E8986C2}
 		{10BFF02E-AA0F-4A45-9752-3FFF0294BB39} = {F0F918FD-6747-4A0B-8EE2-D7F52E8986C2}
+		{880CD3A4-5DE6-439C-9445-DB27CCAEB838} = {F0F918FD-6747-4A0B-8EE2-D7F52E8986C2}
+		{923E1734-4EF2-4E19-B30A-D606644A6EA8} = {880CD3A4-5DE6-439C-9445-DB27CCAEB838}
+		{DD2CC7BC-FA7A-4885-807A-55CC872FEC6E} = {880CD3A4-5DE6-439C-9445-DB27CCAEB838}
 	EndGlobalSection
 EndGlobal
