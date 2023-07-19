@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\Collections\StaticCs.Collections.csproj" />
+    <ProjectReference Include="../src/Async/StaticCs.Async.csproj" />
   </ItemGroup>
 
 </Project>

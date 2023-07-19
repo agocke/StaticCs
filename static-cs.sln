@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StaticCs.Analyzers", "src\S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{6410EF00-D0D3-48DC-97A5-07FA8DFBD005}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StaticCs.Async", "src\Async\StaticCs.Async.csproj", "{48E1C9BD-5F90-4028-95E0-A4EA00201F15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,9 +34,14 @@ Global
 		{6410EF00-D0D3-48DC-97A5-07FA8DFBD005}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6410EF00-D0D3-48DC-97A5-07FA8DFBD005}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6410EF00-D0D3-48DC-97A5-07FA8DFBD005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48E1C9BD-5F90-4028-95E0-A4EA00201F15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48E1C9BD-5F90-4028-95E0-A4EA00201F15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48E1C9BD-5F90-4028-95E0-A4EA00201F15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48E1C9BD-5F90-4028-95E0-A4EA00201F15}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{44789D3C-044A-457B-9F5F-47209D0D5C21} = {E383093D-99E0-4B3D-8B3B-C960B7B7C426}
 		{67978680-9F72-4D01-AD66-1A137D576594} = {E383093D-99E0-4B3D-8B3B-C960B7B7C426}
+		{48E1C9BD-5F90-4028-95E0-A4EA00201F15} = {E383093D-99E0-4B3D-8B3B-C960B7B7C426}
 	EndGlobalSection
 EndGlobal
