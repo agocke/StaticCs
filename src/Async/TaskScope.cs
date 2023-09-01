@@ -38,6 +38,7 @@ public sealed class TaskScope
                 case (null, true, not null):
                     throw backgroundException;
                 case (not null, true, _):
+                case (not null, false, null):
                     throw ex;
                 case (not null, false, not null):
                     throw new AggregateException(ex, backgroundException);

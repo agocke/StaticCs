@@ -74,4 +74,31 @@ public sealed class AsyncTests
         await backgroundTask;
         await scope;
     }
+
+    [Fact]
+    public Task ExceptionRethrownIfNoBackgroundCanceled()
+    {
+        return Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            Task? backgroundTask = null;
+            var scope = TaskScope.With(scope =>
+            {
+                var backgroundCompleted = new TaskCompletionSource();
+                try
+                {
+                    backgroundTask = scope.Run(async () =>
+                    {
+                        await backgroundCompleted.Task;
+                        _output.WriteLine("Background task completed.");
+                    });
+                    throw new InvalidOperationException("Test");
+                }
+                finally
+                {
+                    backgroundCompleted.SetResult();
+                }
+            });
+            await scope;
+        });
+    }
 }
