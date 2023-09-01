@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>StaticCS.Async</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <IsPackable>true</IsPackable>
     <PackageOutputPath>$(ArtifactsPath)pack</PackageOutputPath>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
