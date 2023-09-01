@@ -17,7 +17,6 @@ public sealed class TaskScope
     public static async Task With(Func<TaskScope, Task> action, Action<OperationCanceledException>? onCanceled = null)
     {
         var scope = new TaskScope();
-        Exception? ex = null;
         try
         {
             await action(scope);
@@ -28,26 +27,34 @@ public sealed class TaskScope
         }
         catch (Exception e)
         {
-            ex = e;
-        }
-        finally
-        {
             var (canceled, backgroundException) = await scope.CancelAndGather();
-            switch ((ex, canceled, backgroundException))
+            switch (canceled, backgroundException)
             {
-                case (null, true, not null):
-                    throw backgroundException;
-                case (not null, true, _):
-                case (not null, false, null):
-                    throw ex;
-                case (not null, false, not null):
-                    throw new AggregateException(ex, backgroundException);
-                default:
-                    break;
+                case (true, _):
+                case (false, null):
+                    throw;
+                case (false, not null):
+                    throw new AggregateException(e, backgroundException);
             }
+        }
+        if (await scope.CancelAndGather() is (true, {} ex))
+        {
+            throw ex;
         }
     }
 
+    /// <summary>
+    /// Cancels all outstanding tasks and waits for them to complete.
+    /// </summary>
+    /// <returns>
+    /// (true, null) if any tasks where canceled, and their cancellation token is
+    ///     owned by this scope.
+    /// (true, not null) if any tasks where canceled, and any of them had a token not
+    ///     owned by this scope. The exception is an AggregateException containing all
+    ///     the unhandled OperationCanceledExceptions.
+    /// (false, null) if all background tasks ran to completion.
+    /// (false, not null) if any background tasks faulted.
+    /// </returns>
     private async Task<(bool Canceled, Exception?)> CancelAndGather()
     {
         var finalTasks = CancelOutstanding();
