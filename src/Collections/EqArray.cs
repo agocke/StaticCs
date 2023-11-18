@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Serde;
 
-namespace Dnvm;
+namespace StaticCs.Collections;
 
 public static class EqArray
 {
@@ -18,9 +18,17 @@ public static class EqArray
 }
 
 [SerdeWrap(typeof(EqArraySerdeWrap))]
+#if NET8_0_OR_GREATER
 [CollectionBuilder(typeof(EqArray), nameof(EqArray.Create))]
-public readonly struct EqArray<T>(ImmutableArray<T> value) : IReadOnlyCollection<T>, IEquatable<EqArray<T>>
+#endif
+public readonly struct EqArray<T> : IReadOnlyCollection<T>, IEquatable<EqArray<T>>
 {
+    private readonly ImmutableArray<T> value;
+    public EqArray(ImmutableArray<T> value)
+    {
+        this.value = value;
+    }
+
     public ImmutableArray<T> Array => value;
 
     public static readonly EqArray<T> Empty = ImmutableArray<T>.Empty.ToEq();
