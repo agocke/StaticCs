@@ -1,13 +1,14 @@
 
 namespace StaticCs;
 
-internal enum DiagId
+public enum DiagId
 {
     ClosedEnumConversion = 1,
-    SwitchOnClosedSuppress = 2
+    SwitchOnClosedSuppress = 2,
+    ClassOrRecordMustBeClosed = 3,
 }
 
-internal static class DiagUtils
+public static class DiagUtils
 {
     private const string DiagPrefix = "STATICCS";
 
