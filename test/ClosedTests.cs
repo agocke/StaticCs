@@ -272,6 +272,31 @@ class C
             DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 31, 10, 37).WithArguments("Option<int>.Some(0) { }"));
     }
 
+    [Fact]
+    public async Task ClosedRecordTypeTestWithVariable()
+    {
+        var src = """
+[StaticCs.Closed]
+abstract record Base
+{
+    private Base() { }
+    public record A : Base;
+    public record B : Base;
+}
+class C
+{
+    int M(Base b) => b switch
+    {
+        Base.A a => a.GetHashCode(),
+        Base.B => 1,
+    };
+}
+""";
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+            // /0/Test0.cs(10,24): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
+            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 24, 10, 30).WithArguments("_").WithIsSuppressed(true));
+    }
+
     private static readonly DiagnosticResult ClosedEnumConversion = CSharpAnalyzerVerifier<EnumClosedConversionAnalyzer, XUnitVerifier>.Diagnostic(DiagId.ClosedEnumConversion.ToIdString());
     private static readonly DiagnosticResult ClassOrRecordMustBeClosed = CSharpAnalyzerVerifier<ClosedDeclarationChecker, XUnitVerifier>.Diagnostic(DiagId.ClassOrRecordMustBeClosed.ToIdString());
 

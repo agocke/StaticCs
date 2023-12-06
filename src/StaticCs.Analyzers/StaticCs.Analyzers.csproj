@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>StaticCS</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <IsPackable>true</IsPackable>
     <PackageOutputPath>$(ArtifactsPath)pack</PackageOutputPath>
     <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
