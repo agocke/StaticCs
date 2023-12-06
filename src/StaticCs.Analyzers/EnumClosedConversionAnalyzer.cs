@@ -10,8 +10,8 @@ namespace StaticCs;
 [DiagnosticAnalyzer("C#")]
 public sealed class EnumClosedConversionAnalyzer : DiagnosticAnalyzer
 {
-    private static readonly DiagnosticDescriptor s_descriptor = new DiagnosticDescriptor(
-            id: DiagId.SwitchOnClosedSuppress.ToIdString(),
+    public static readonly DiagnosticDescriptor s_descriptor = new DiagnosticDescriptor(
+            id: DiagId.ClosedEnumConversion.ToIdString(),
             title: "Integers cannot be converted to [Closed] enums",
             messageFormat: "Integer conversions to [Closed] enum {0} are disallowed",
             category: "StaticCs",
