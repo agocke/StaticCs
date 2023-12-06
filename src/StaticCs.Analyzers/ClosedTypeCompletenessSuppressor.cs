@@ -71,6 +71,14 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
                                     subTypes.Remove(namedType);
                                 }
                             }
+                            else if (arm.Pattern is DeclarationPatternSyntax { Type: { } patternSyntax })
+                            {
+                                var symbolInfo = model.GetSymbolInfo(patternSyntax);
+                                if (symbolInfo.Symbol is INamedTypeSymbol namedType)
+                                {
+                                    subTypes.Remove(namedType);
+                                }
+                            }
                             else if (arm.Pattern is RecursivePatternSyntax
                             {
                                 Type: { } patternTypeSyntax,
