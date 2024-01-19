@@ -20,11 +20,11 @@ public enum CardSuit {
   Diamond
 }
 
-public int SuitsToInt(CardSuit suit) => switch {
-    Spade => 0,
-    Club => 1,
-    Heart => 2,
-    Diamond => 3
+int SuitsToInt(CardSuit suit) => switch {
+    CardSuit.Spade => 0,
+    CardSuit.Club => 1,
+    CardSuit.Heart => 2,
+    CardSuit.Diamond => 3
     // No warning about switch incompleteness
 };
 ```
@@ -36,17 +36,17 @@ Records:
 public abstract record CardSuit {
   private CardSuit() { }
 
-  public record Spade() : CardSuit,
-  public record Club() : CardSuit,
-  public record Heart() : CardSuit,
-  public record Diamond() : CardSuit
+  public record Spade() : CardSuit;
+  public record Club() : CardSuit;
+  public record Heart() : CardSuit;
+  public record Diamond() : CardSuit;
 }
 
-public int SuitsToInt(CardSuit suit) => switch {
-    Spade => 0,
-    Club => 1,
-    Heart => 2,
-    Diamond => 3
+int SuitsToInt(CardSuit suit) => switch {
+    CardSuit.Spade => 0,
+    CardSuit.Club => 1,
+    CardSuit.Heart => 2,
+    CardSuit.Diamond => 3
     // No warning about switch incompleteness
 };
 ```
