@@ -309,7 +309,7 @@ class C
             ReferenceAssemblies = ReferenceAssemblies.Net.Net60
         };
         test.TestState.Sources.Add(
-            File.ReadAllText(Path.Combine(CurrentPath(), "../../src/StaticCs.ContentFiles/ClosedAttribute.cs")));
+            File.ReadAllText(Path.Combine(CurrentPath(), "../../../src/StaticCs.ContentFiles/ClosedAttribute.cs")));
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
     }
