@@ -10,7 +10,6 @@
     <PackageId>StaticCS.Async</PackageId>
     <Version>0.1.2</Version>
     <IsPackable>true</IsPackable>
-    <PackageOutputPath>$(ArtifactsPath)pack</PackageOutputPath>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
