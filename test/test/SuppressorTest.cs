@@ -6,12 +6,12 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
+using Microsoft.CodeAnalysis.Testing.Verifiers;
 
 namespace StaticCs.Tests;
 
-internal class SuppressorTest<TAnalyzer, TVerifier> : CSharpAnalyzerTest<TAnalyzer, TVerifier>
+internal class SuppressorTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, XUnitVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
-    where TVerifier : IVerifier, new()
 {
     public CSharpCompilationOptions CompilationOptions { get; private init; }
         = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true)
@@ -19,7 +19,7 @@ internal class SuppressorTest<TAnalyzer, TVerifier> : CSharpAnalyzerTest<TAnalyz
 
     public SuppressorTest() { }
 
-    private SuppressorTest(SuppressorTest<TAnalyzer, TVerifier> other)
+    private SuppressorTest(SuppressorTest<TAnalyzer> other)
     {
         CompilationOptions = other.CompilationOptions;
     }
@@ -29,7 +29,7 @@ internal class SuppressorTest<TAnalyzer, TVerifier> : CSharpAnalyzerTest<TAnalyz
     protected override CompilationWithAnalyzers CreateCompilationWithAnalyzers(Compilation compilation, ImmutableArray<DiagnosticAnalyzer> analyzers, AnalyzerOptions options, CancellationToken cancellationToken)
         => new CompilationWithAnalyzers(compilation, analyzers, new CompilationWithAnalyzersOptions(options, onAnalyzerException: null, concurrentAnalysis: false, logAnalyzerExecutionTime: false, reportSuppressedDiagnostics: true));
 
-    public SuppressorTest<TAnalyzer, TVerifier> WithCompilationOptions(CSharpCompilationOptions options)
+    public SuppressorTest<TAnalyzer> WithCompilationOptions(CSharpCompilationOptions options)
     {
         return new(this) { CompilationOptions = options };
     }
