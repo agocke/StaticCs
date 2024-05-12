@@ -1,9 +1,9 @@
 
-name: Pack
+name: Publish
 
 on:
   release:
-    types: [created]
+    types: [ published ]
 
 
 jobs:
@@ -20,9 +20,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Pack
-      run: dotnet pack
-    - name: Upload packages
-      uses: actions/upload-artifact@v2
-      with:
-        name: "packages"
-        path: artifacts/packages/release/*.nupkg
+      run: dotnet pack -c release
+    - name: Publish packages
+      run: dotnet nuget push --skip-duplicate -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json artifacts/packages/release/*.nupkg

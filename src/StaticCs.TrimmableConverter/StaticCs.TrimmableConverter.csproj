@@ -15,7 +15,8 @@
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
-  </PropertyGroup>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="polysharp" Version="1.14.1">
