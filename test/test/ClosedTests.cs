@@ -302,14 +302,15 @@ class C
 
     private Task VerifyDiagnostics<TAnalyzer>(string src, params DiagnosticResult[] expected) where TAnalyzer : DiagnosticAnalyzer, new()
     {
-        var test = new CSharpAnalyzerTest<TAnalyzer, XUnitVerifier>
+        var test = new SuppressorTest<TAnalyzer>
         {
             TestCode = src,
             CompilerDiagnostics = CompilerDiagnostics.Warnings,
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net60
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net60,
+            TestBehaviors = TestBehaviors.SkipSuppressionCheck
         };
         test.TestState.Sources.Add(
-            File.ReadAllText(Path.Combine(CurrentPath(), "../../src/StaticCs.ContentFiles/ClosedAttribute.cs")));
+            File.ReadAllText(Path.Combine(CurrentPath(), "../../../src/StaticCs.ContentFiles/ClosedAttribute.cs")));
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
     }
