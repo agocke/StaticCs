@@ -16,7 +16,11 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-   </PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="polysharp" Version="1.14.1">
