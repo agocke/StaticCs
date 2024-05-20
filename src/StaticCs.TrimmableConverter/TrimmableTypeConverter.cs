@@ -57,7 +57,7 @@ public static class TrimmableTypeConverter
         return new TypeConverter();
     }
 
-    public static TypeConverter? GetConverter<[DAM(ConverterAnnotation)] T>() => GetConverter(typeof(T));
+    public static TypeConverter GetConverter<[DAM(ConverterAnnotation)] T>() => GetConverter(typeof(T));
 
     private static readonly ArrayConverter s_arrayConverter = new();
     private static readonly CollectionConverter s_collectionConverter = new();
