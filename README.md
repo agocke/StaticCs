@@ -1,4 +1,4 @@
-# static-cs
+# StaticCs
 
 A series of analyzers, attributes, and libraries to help C# developers write clearer, more type-safe code.
 
