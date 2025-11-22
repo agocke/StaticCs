@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.9.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
@@ -21,6 +25,7 @@
     <ProjectReference Include="../../src/Collections/StaticCs.Collections.csproj" />
     <ProjectReference Include="../../src/Async/StaticCs.Async.csproj" />
     <ProjectReference Include="../../src/StaticCs/StaticCs.csproj" />
+    <ProjectReference Include="../../src/IndentingBuilder/IndentingBuilder.csproj" />
   </ItemGroup>
 
 </Project>
