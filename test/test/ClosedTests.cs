@@ -80,7 +80,7 @@ class C
     }
 
     [Fact]
-    public async Task ImplicitConversionToClosedLoophole()
+    public async Task ImplicitConversionToClosedError()
     {
         var src = """
 using System;
@@ -96,7 +96,9 @@ class C
     }
 }
 """;
-        await VerifyDiagnostics<EnumClosedConversionAnalyzer>(src);
+        await VerifyDiagnostics<EnumClosedConversionAnalyzer>(src,
+            // /0/Test0.cs(9,19): error STATICCS002: Integer conversions to [Closed] enum Rgb are disallowed
+            ClosedEnumConversion.WithSpan(9, 19, 9, 20).WithArguments("Rgb"));
     }
 
     [Fact]

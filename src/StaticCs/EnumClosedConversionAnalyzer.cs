@@ -1,9 +1,8 @@
 
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace StaticCs;
 
@@ -24,22 +23,30 @@ public sealed class EnumClosedConversionAnalyzer : DiagnosticAnalyzer
     {
         ctx.EnableConcurrentExecution();
         ctx.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.ReportDiagnostics);
-        ctx.RegisterSyntaxNodeAction(ctx =>
+        ctx.RegisterOperationAction(ctx =>
         {
-            var castSyntax = (CastExpressionSyntax)ctx.Node;
-            var model = ctx.SemanticModel;
-            var targetTypeInfo = model.GetTypeInfo(castSyntax.Type);
-
-            if (targetTypeInfo.Type is { TypeKind: TypeKind.Enum } type)
+            var conversion = (IConversionOperation)ctx.Operation;
+            
+            // Check if the conversion is from an integer type to an enum type
+            if (conversion.Type is { TypeKind: TypeKind.Enum } targetType &&
+                conversion.Operand.Type?.SpecialType is 
+                    SpecialType.System_SByte or
+                    SpecialType.System_Byte or
+                    SpecialType.System_Int16 or
+                    SpecialType.System_UInt16 or
+                    SpecialType.System_Int32 or
+                    SpecialType.System_UInt32 or
+                    SpecialType.System_Int64 or
+                    SpecialType.System_UInt64)
             {
-                foreach (var attr in type.GetAttributes())
+                foreach (var attr in targetType.GetAttributes())
                 {
                     if (attr.AttributeClass?.ToDisplayString() == "StaticCs.ClosedAttribute")
                     {
-                        ctx.ReportDiagnostic(Diagnostic.Create(s_descriptor, castSyntax.GetLocation(), type));
+                        ctx.ReportDiagnostic(Diagnostic.Create(s_descriptor, conversion.Syntax.GetLocation(), targetType));
                     }
                 }
             }
-        }, SyntaxKind.CastExpression);
+        }, OperationKind.Conversion);
     }
 }
