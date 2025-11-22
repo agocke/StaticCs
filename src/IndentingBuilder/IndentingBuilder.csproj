@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion Condition="'$(TargetFramework)' == 'netstandard2.0'">12.0</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>StaticCS.IndentingBuilder</PackageId>
+    <Version>0.1.0</Version>
+    <IsPackable>true</IsPackable>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
+    <Description>A string builder with automatic indentation support for multi-line text generation.</Description>
+    <Authors>agocke</Authors>
+    <PackageTags>string-builder;indentation;code-generation;text-generation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+  </ItemGroup>
+
+</Project>
