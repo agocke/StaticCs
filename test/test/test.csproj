@@ -25,7 +25,10 @@
     <ProjectReference Include="../../src/Collections/StaticCs.Collections.csproj" />
     <ProjectReference Include="../../src/Async/StaticCs.Async.csproj" />
     <ProjectReference Include="../../src/StaticCs/StaticCs.csproj" />
-    <ProjectReference Include="../../src/IndentingBuilder/IndentingBuilder.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../src/IndentingBuilder/IndentingBuilder.cs" Link="IndentingBuilder.cs" />
   </ItemGroup>
 
 </Project>

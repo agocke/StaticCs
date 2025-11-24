@@ -1,8 +1,35 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace StaticCs;
+#if !NET6_0_OR_GREATER
+namespace System.Runtime.CompilerServices
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+    internal sealed class InterpolatedStringHandlerAttribute : Attribute
+    {
+    }
 
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
+    internal sealed class InterpolatedStringHandlerArgumentAttribute : Attribute
+    {
+        public InterpolatedStringHandlerArgumentAttribute(string argument)
+        {
+            Arguments = new string[] { argument };
+        }
+
+        public InterpolatedStringHandlerArgumentAttribute(params string[] arguments)
+        {
+            Arguments = arguments;
+        }
+
+        public string[] Arguments { get; }
+    }
+}
+#endif
+
+namespace StaticCs
+{
 /// <summary>
 /// A string builder with automatic indentation support for multi-line text.
 /// Manages indentation levels with <see cref="Indent"/> and <see cref="Dedent"/> methods,
@@ -156,7 +183,7 @@ public sealed class IndentingBuilder : IComparable<IndentingBuilder>, IEquatable
 
     public void Dedent()
     {
-        _currentIndentWhitespace = _currentIndentWhitespace[..^4];
+        _currentIndentWhitespace = _currentIndentWhitespace.Substring(0, _currentIndentWhitespace.Length - 4);
     }
 
     public bool Equals(IndentingBuilder? other)
@@ -210,16 +237,16 @@ public sealed class IndentingBuilder : IComparable<IndentingBuilder>, IEquatable
                 return;
             }
 
-            var remaining = s.AsSpan(last + 1);
+            var remaining = s.Substring(last + 1);
             foreach (var c in remaining)
             {
-                if (c is not (' ' or '\t'))
+                if (c != ' ' && c != '\t')
                 {
                     return;
                 }
             }
 
-            _currentIndentWhitespace += remaining.ToString();
+            _currentIndentWhitespace += remaining;
         }
 
         public void AppendFormatted<T>(T value)
@@ -240,4 +267,5 @@ public sealed class IndentingBuilder : IComparable<IndentingBuilder>, IEquatable
             _currentIndentWhitespace = _originalIndentWhitespace;
         }
     }
+}
 }
