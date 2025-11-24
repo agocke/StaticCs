@@ -9,14 +9,27 @@
 
   <PropertyGroup>
     <PackageId>StaticCS.IndentingBuilder</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
-    <Description>A string builder with automatic indentation support for multi-line text generation.</Description>
+    <Description>A string builder with automatic indentation support for multi-line text generation. Distributed as source code for easy inclusion in source generators.</Description>
     <Authors>agocke</Authors>
-    <PackageTags>string-builder;indentation;code-generation;text-generation</PackageTags>
+    <PackageTags>string-builder;indentation;code-generation;text-generation;source-only</PackageTags>
+    
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <ContentTargetFolders>contentFiles</ContentTargetFolders>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="IndentingBuilder.cs">
+      <Pack>true</Pack>
+      <PackagePath>contentFiles/cs/any</PackagePath>
+      <BuildAction>Compile</BuildAction>
+      <CopyToOutput>false</CopyToOutput>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="PolySharp" Version="1.15.0">
