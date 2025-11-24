@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <Version>0.1.0</Version>
@@ -17,5 +16,4 @@
     <ProjectReference Include="..\StaticCs\StaticCs.csproj" />
     <Compile Include="..\StaticCs.ContentFiles\*.cs" />
   </ItemGroup>
-
 </Project>

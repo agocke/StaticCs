@@ -1,4 +1,3 @@
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +9,7 @@ namespace StaticCs.Async.Tests;
 public sealed class AsyncTests
 {
     private ITestOutputHelper _output;
+
     public AsyncTests(ITestOutputHelper output)
     {
         _output = output;
@@ -19,12 +19,14 @@ public sealed class AsyncTests
     public async Task ExceptionInBackgroundCancelsForeground()
     {
         CancellationToken token = default;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => TaskScope.With(async scope =>
-        {
-            token = scope.CancellationToken;
-            var task = scope.Run(() => throw new InvalidOperationException("Test"));
-            await Task.Delay(TimeSpan.FromSeconds(1), token);
-        }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            TaskScope.With(async scope =>
+            {
+                token = scope.CancellationToken;
+                var task = scope.Run(() => throw new InvalidOperationException("Test"));
+                await Task.Delay(TimeSpan.FromSeconds(1), token);
+            })
+        );
         Assert.True(token.IsCancellationRequested);
     }
 
@@ -33,16 +35,18 @@ public sealed class AsyncTests
     {
         CancellationToken token = default;
         Task? backgroundTask = null;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => TaskScope.With(scope =>
-        {
-            token = scope.CancellationToken;
-            backgroundTask = scope.Run(async () =>
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            TaskScope.With(scope =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(10), token);
-                _output.WriteLine("Background task completed.");
-            });
-            throw new InvalidOperationException("Test");
-        }));
+                token = scope.CancellationToken;
+                backgroundTask = scope.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), token);
+                    _output.WriteLine("Background task completed.");
+                });
+                throw new InvalidOperationException("Test");
+            })
+        );
         Assert.True(token.IsCancellationRequested);
         Assert.NotNull(backgroundTask);
         Assert.Equal(TaskStatus.Canceled, backgroundTask.Status);

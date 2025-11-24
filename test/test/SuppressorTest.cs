@@ -1,4 +1,3 @@
-
 using System.Collections.Immutable;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -13,9 +12,11 @@ namespace StaticCs.Tests;
 internal class SuppressorTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, XUnitVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
 {
-    public CSharpCompilationOptions CompilationOptions { get; private init; }
-        = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true)
-            .WithReportSuppressedDiagnostics(true);
+    public CSharpCompilationOptions CompilationOptions { get; private init; } =
+        new CSharpCompilationOptions(
+            OutputKind.DynamicallyLinkedLibrary,
+            allowUnsafe: true
+        ).WithReportSuppressedDiagnostics(true);
 
     public SuppressorTest() { }
 
@@ -26,8 +27,23 @@ internal class SuppressorTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, XUnitVe
 
     protected override CompilationOptions CreateCompilationOptions() => CompilationOptions;
 
-    protected override CompilationWithAnalyzers CreateCompilationWithAnalyzers(Compilation compilation, ImmutableArray<DiagnosticAnalyzer> analyzers, AnalyzerOptions options, CancellationToken cancellationToken)
-        => new CompilationWithAnalyzers(compilation, analyzers, new CompilationWithAnalyzersOptions(options, onAnalyzerException: null, concurrentAnalysis: false, logAnalyzerExecutionTime: false, reportSuppressedDiagnostics: true));
+    protected override CompilationWithAnalyzers CreateCompilationWithAnalyzers(
+        Compilation compilation,
+        ImmutableArray<DiagnosticAnalyzer> analyzers,
+        AnalyzerOptions options,
+        CancellationToken cancellationToken
+    ) =>
+        new CompilationWithAnalyzers(
+            compilation,
+            analyzers,
+            new CompilationWithAnalyzersOptions(
+                options,
+                onAnalyzerException: null,
+                concurrentAnalysis: false,
+                logAnalyzerExecutionTime: false,
+                reportSuppressedDiagnostics: true
+            )
+        );
 
     public SuppressorTest<TAnalyzer> WithCompilationOptions(CSharpCompilationOptions options)
     {

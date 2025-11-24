@@ -91,9 +91,13 @@ public sealed class IndentingBuilderTests
         builder.Indent();
         builder.AppendLine("Level 2");
 
-        var expected = "Level 0" + Environment.NewLine +
-                      "    Level 1" + Environment.NewLine +
-                      "        Level 2" + Environment.NewLine;
+        var expected =
+            "Level 0"
+            + Environment.NewLine
+            + "    Level 1"
+            + Environment.NewLine
+            + "        Level 2"
+            + Environment.NewLine;
         Assert.Equal(expected, builder.ToString());
     }
 
@@ -107,9 +111,13 @@ public sealed class IndentingBuilderTests
         builder.Dedent();
         builder.AppendLine("Back to Level 0");
 
-        var expected = "Level 0" + Environment.NewLine +
-                      "    Level 1" + Environment.NewLine +
-                      "Back to Level 0" + Environment.NewLine;
+        var expected =
+            "Level 0"
+            + Environment.NewLine
+            + "    Level 1"
+            + Environment.NewLine
+            + "Back to Level 0"
+            + Environment.NewLine;
         Assert.Equal(expected, builder.ToString());
     }
 
@@ -130,12 +138,19 @@ public sealed class IndentingBuilderTests
         builder.Dedent();
         builder.AppendLine("Level 0");
 
-        var expected = "Level 0" + Environment.NewLine +
-                      "    Level 1" + Environment.NewLine +
-                      "        Level 2" + Environment.NewLine +
-                      "            Level 3" + Environment.NewLine +
-                      "    Level 1" + Environment.NewLine +
-                      "Level 0" + Environment.NewLine;
+        var expected =
+            "Level 0"
+            + Environment.NewLine
+            + "    Level 1"
+            + Environment.NewLine
+            + "        Level 2"
+            + Environment.NewLine
+            + "            Level 3"
+            + Environment.NewLine
+            + "    Level 1"
+            + Environment.NewLine
+            + "Level 0"
+            + Environment.NewLine;
         Assert.Equal(expected, builder.ToString());
     }
 
@@ -146,9 +161,8 @@ public sealed class IndentingBuilderTests
         builder.Indent();
         builder.Append("Line 1\nLine 2\nLine 3");
 
-        var expected = "    Line 1" + Environment.NewLine +
-                      "    Line 2" + Environment.NewLine +
-                      "    Line 3";
+        var expected =
+            "    Line 1" + Environment.NewLine + "    Line 2" + Environment.NewLine + "    Line 3";
         Assert.Equal(expected, builder.ToString());
     }
 
@@ -260,9 +274,7 @@ public sealed class IndentingBuilderTests
         builder2.AppendLine(builder1);
         builder2.Append("After");
 
-        var expected = "    FirstSecond" + Environment.NewLine + 
-                      Environment.NewLine + 
-                      "    After";
+        var expected = "    FirstSecond" + Environment.NewLine + Environment.NewLine + "    After";
         Assert.Equal(expected, builder2.ToString());
     }
 
@@ -309,10 +321,14 @@ public sealed class IndentingBuilderTests
         builder.Append($"Start\n{multiline}\nEnd");
 
         // After a formatted value, indentation resets to the original level
-        var expected = "    Start" + Environment.NewLine +
-                      "Line1" + Environment.NewLine +
-                      "    Line2" + Environment.NewLine +
-                      "    End";
+        var expected =
+            "    Start"
+            + Environment.NewLine
+            + "Line1"
+            + Environment.NewLine
+            + "    Line2"
+            + Environment.NewLine
+            + "    End";
         Assert.Equal(expected, builder.ToString());
     }
 
@@ -340,14 +356,23 @@ public sealed class IndentingBuilderTests
         builder.Dedent();
         builder.AppendLine("}");
 
-        var expected = "public class Example" + Environment.NewLine +
-                      "{" + Environment.NewLine +
-                      "    public void Method()" + Environment.NewLine +
-                      "    {" + Environment.NewLine +
-                      "        Console.WriteLine(\"Hello\");" + Environment.NewLine +
-                      "        Console.WriteLine(\"World\");" + Environment.NewLine +
-                      "    }" + Environment.NewLine +
-                      "}" + Environment.NewLine;
+        var expected =
+            "public class Example"
+            + Environment.NewLine
+            + "{"
+            + Environment.NewLine
+            + "    public void Method()"
+            + Environment.NewLine
+            + "    {"
+            + Environment.NewLine
+            + "        Console.WriteLine(\"Hello\");"
+            + Environment.NewLine
+            + "        Console.WriteLine(\"World\");"
+            + Environment.NewLine
+            + "    }"
+            + Environment.NewLine
+            + "}"
+            + Environment.NewLine;
         Assert.Equal(expected, builder.ToString());
     }
 

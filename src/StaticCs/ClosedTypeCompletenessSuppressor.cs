@@ -14,16 +14,18 @@ namespace StaticCs;
 [DiagnosticAnalyzer("C#")]
 public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
 {
-    private readonly static SuppressionDescriptor s_enumDescriptor = new SuppressionDescriptor(
+    private static readonly SuppressionDescriptor s_enumDescriptor = new SuppressionDescriptor(
         DiagId.SwitchOnClosedSuppress.ToIdString(),
         "CS8524",
-        "Enum is marked [Closed]");
-    private readonly static SuppressionDescriptor s_classDescriptor = new SuppressionDescriptor(
+        "Enum is marked [Closed]"
+    );
+    private static readonly SuppressionDescriptor s_classDescriptor = new SuppressionDescriptor(
         DiagId.SwitchOnClosedSuppress.ToIdString(),
         "CS8509",
-        "Enum is marked [Closed]");
-    public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions { get; } = ImmutableArray.Create(s_enumDescriptor, s_classDescriptor);
-
+        "Enum is marked [Closed]"
+    );
+    public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions { get; } =
+        ImmutableArray.Create(s_enumDescriptor, s_classDescriptor);
 
     public override void ReportSuppressions(SuppressionAnalysisContext context)
     {
@@ -71,7 +73,9 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
                                     subTypes.Remove(namedType);
                                 }
                             }
-                            else if (arm.Pattern is DeclarationPatternSyntax { Type: { } patternSyntax })
+                            else if (
+                                arm.Pattern is DeclarationPatternSyntax { Type: { } patternSyntax }
+                            )
                             {
                                 var symbolInfo = model.GetSymbolInfo(patternSyntax);
                                 if (symbolInfo.Symbol is INamedTypeSymbol namedType)
@@ -79,15 +83,23 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
                                     subTypes.Remove(namedType);
                                 }
                             }
-                            else if (arm.Pattern is RecursivePatternSyntax
+                            else if (
+                                arm.Pattern is RecursivePatternSyntax
+                                {
+                                    Type: { } patternTypeSyntax,
+                                    PositionalPatternClause: PositionalPatternClauseSyntax
+                                    {
+                                        Subpatterns: { } subpatterns
+                                    }
+                                }
+                            )
                             {
-                                Type: { } patternTypeSyntax,
-                                PositionalPatternClause: PositionalPatternClauseSyntax { Subpatterns: { } subpatterns }
-                            })
-                            {
-                                if (model.GetSymbolInfo(patternTypeSyntax).Symbol is INamedTypeSymbol patternType &&
-                                    subTypes.Contains(patternType) &&
-                                    IsIrrefutablePositional(subpatterns, patternType, model))
+                                if (
+                                    model.GetSymbolInfo(patternTypeSyntax).Symbol
+                                        is INamedTypeSymbol patternType
+                                    && subTypes.Contains(patternType)
+                                    && IsIrrefutablePositional(subpatterns, patternType, model)
+                                )
                                 {
                                     subTypes.Remove(patternType);
                                 }
@@ -99,7 +111,6 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
                             context.ReportSuppression(Suppression.Create(s_classDescriptor, diag));
                             break;
                         }
-
                     }
                 }
             }
@@ -109,19 +120,28 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
     private static bool IsIrrefutablePositional(
         SeparatedSyntaxList<SubpatternSyntax> subpatterns,
         INamedTypeSymbol patternType,
-        SemanticModel model)
+        SemanticModel model
+    )
     {
         var matchingDeconstructors = patternType
             .GetMembers()
             .OfType<IMethodSymbol>()
-            .Where(m => m is { Name: "Deconstruct", Parameters: { Length: var paramCount } } &&
-                        paramCount == subpatterns.Count);
+            .Where(m =>
+                m is { Name: "Deconstruct", Parameters: { Length: var paramCount } }
+                && paramCount == subpatterns.Count
+            );
         foreach (var deconstruct in matchingDeconstructors)
         {
             bool matched = true;
             for (int i = 0; i < deconstruct.Parameters.Length; i++)
             {
-                if (!IsSubpatternIrrefutable(subpatterns[i].Pattern, deconstruct.Parameters[i].Type, model))
+                if (
+                    !IsSubpatternIrrefutable(
+                        subpatterns[i].Pattern,
+                        deconstruct.Parameters[i].Type,
+                        model
+                    )
+                )
                 {
                     matched = false;
                     break;
@@ -137,7 +157,11 @@ public class ClosedTypeCompletenessSuppressor : DiagnosticSuppressor
 
     // Check for an irrefutable match of a positional subpattern against a
     // Deconstruct parameter
-    private static bool IsSubpatternIrrefutable(PatternSyntax pattern, ITypeSymbol paramType, SemanticModel model)
+    private static bool IsSubpatternIrrefutable(
+        PatternSyntax pattern,
+        ITypeSymbol paramType,
+        SemanticModel model
+    )
     {
         switch (pattern)
         {
