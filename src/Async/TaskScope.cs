@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +13,10 @@ public sealed class TaskScope
 
     private TaskScope() { }
 
-    public static async Task With(Func<TaskScope, Task> action, Action<OperationCanceledException>? onCanceled = null)
+    public static async Task With(
+        Func<TaskScope, Task> action,
+        Action<OperationCanceledException>? onCanceled = null
+    )
     {
         var scope = new TaskScope();
         try
@@ -37,7 +39,7 @@ public sealed class TaskScope
                     throw new AggregateException(e, backgroundException);
             }
         }
-        if (await scope.CancelAndGather() is (true, {} ex))
+        if (await scope.CancelAndGather() is (true, { } ex))
         {
             throw ex;
         }
@@ -75,7 +77,10 @@ public sealed class TaskScope
                 return (false, null);
             case TaskStatus.Canceled:
                 List<OperationCanceledException>? unhandledCancels = null;
-                foreach (var ex in (IEnumerable<Exception>?)t.Exception?.InnerExceptions ?? Array.Empty<Exception>())
+                foreach (
+                    var ex in (IEnumerable<Exception>?)t.Exception?.InnerExceptions
+                        ?? Array.Empty<Exception>()
+                )
                 {
                     // Filter out all cancellations that are owned by this scope
                     if (ex is OperationCanceledException e && e.CancellationToken != _cts.Token)
@@ -130,17 +135,22 @@ public sealed class TaskScope
             throw new InvalidOperationException("TaskScope has ended.");
         }
 
-        var task = Task.Factory.StartNew(async () =>
-        {
-            try
-            {
-                await action();
-            }
-            catch when (CancelAndRethrow(this))
-            {
-                throw new Exception("Unreachable");
-            }
-        }, TaskCreationOptions.AttachedToParent).Unwrap();
+        var task = Task
+            .Factory.StartNew(
+                async () =>
+                {
+                    try
+                    {
+                        await action();
+                    }
+                    catch when (CancelAndRethrow(this))
+                    {
+                        throw new Exception("Unreachable");
+                    }
+                },
+                TaskCreationOptions.AttachedToParent
+            )
+            .Unwrap();
         _tasks.Add(task);
         return task;
     }

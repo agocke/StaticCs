@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,8 +11,11 @@ namespace StaticCs.Collections;
 public static class EqArray
 {
     public static EqArray<T> ToEq<T>(this IEnumerable<T> array) => new(array.ToImmutableArray());
+
     public static EqArray<T> ToEq<T>(this ImmutableArray<T> array) => new(array);
+
     public static EqArray<T> Create<T>(params T[] array) => ImmutableArray.Create(array).ToEq();
+
     public static EqArray<T> Create<T>(ReadOnlySpan<T> span) => ImmutableArray.Create(span).ToEq();
 }
 
@@ -24,6 +26,7 @@ public static class EqArray
 public readonly struct EqArray<T> : IReadOnlyCollection<T>, IEquatable<EqArray<T>>
 {
     private readonly ImmutableArray<T> value;
+
     public EqArray(ImmutableArray<T> value)
     {
         this.value = value;
@@ -72,22 +75,26 @@ public static class EqArraySerdeWrap
     {
         public void Serialize(ISerializer serializer)
         {
-            EnumerableHelpers.SerializeSpan<T, TWrap>(typeof(EqArray<T>).Name, Value.Array.AsSpan(), serializer);
+            EnumerableHelpers.SerializeSpan<T, TWrap>(
+                typeof(EqArray<T>).Name,
+                Value.Array.AsSpan(),
+                serializer
+            );
         }
     }
+
     public readonly record struct DeserializeImpl<T, TWrap> : IDeserialize<EqArray<T>>
         where TWrap : IDeserialize<T>
     {
         static EqArray<T> IDeserialize<EqArray<T>>.Deserialize<D>(ref D deserializer)
         {
-            return deserializer.DeserializeEnumerable<
-                EqArray<T>,
-                Visitor>(new Visitor());
+            return deserializer.DeserializeEnumerable<EqArray<T>, Visitor>(new Visitor());
         }
 
         private struct Visitor : IDeserializeVisitor<EqArray<T>>
         {
             public string ExpectedTypeName => typeof(ImmutableArray<T>).ToString();
+
             EqArray<T> IDeserializeVisitor<EqArray<T>>.VisitEnumerable<D>(ref D d)
             {
                 ImmutableArray<T>.Builder builder;
@@ -107,7 +114,9 @@ public static class EqArraySerdeWrap
                 }
                 if (size >= 0 && builder.Count != size)
                 {
-                    throw new InvalidDeserializeValueException($"Expected {size} items, found {builder.Count}");
+                    throw new InvalidDeserializeValueException(
+                        $"Expected {size} items, found {builder.Count}"
+                    );
                 }
                 return new(builder.ToImmutable());
             }

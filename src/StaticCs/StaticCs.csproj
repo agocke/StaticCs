@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -22,12 +21,15 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.0" />
-    <None Include="$(OutputPath)/StaticCs.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    <None
+      Include="$(OutputPath)/StaticCs.Analyzers.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+    />
     <None Include="../StaticCs.ContentFiles/*.cs">
       <Pack>true</Pack>
       <PackagePath>contentFiles/cs/any</PackagePath>
       <BuildAction>compile</BuildAction>
     </None>
   </ItemGroup>
-
 </Project>

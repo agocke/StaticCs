@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using StaticCs;
 using System.ComponentModel;
+using StaticCs;
 using Xunit;
 
 // Primitive types
@@ -21,11 +21,9 @@ Assert.IsType<DateTimeConverter>(TrimmableTypeConverter.GetConverter(typeof(Date
 Assert.IsType<MyConverter>(TrimmableTypeConverter.GetConverter(typeof(Converted)));
 Assert.IsType<TypeConverter>(TrimmableTypeConverter.GetConverter(typeof(Unconverted)));
 
-class Unconverted {}
+class Unconverted { }
 
 [TypeConverter(typeof(MyConverter))]
-class Converted
-{
-}
+class Converted { }
 
 class MyConverter : TypeConverter { }

@@ -12,7 +12,7 @@ public static class TrimmableTypeConverter
     private static readonly Dictionary<Type, TypeConverter> _intrinsicConverters = new()
     {
         [typeof(bool)] = new BooleanConverter(),
-        [typeof(byte)] =  new ByteConverter(),
+        [typeof(byte)] = new ByteConverter(),
         [typeof(sbyte)] = new SByteConverter(),
         [typeof(char)] = new CharConverter(),
         [typeof(double)] = new DoubleConverter(),
@@ -34,7 +34,9 @@ public static class TrimmableTypeConverter
         [typeof(Uri)] = new UriTypeConverter(),
     };
 
-    internal const DynamicallyAccessedMemberTypes ConverterAnnotation = DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicFields;
+    internal const DynamicallyAccessedMemberTypes ConverterAnnotation =
+        DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
+        | DynamicallyAccessedMemberTypes.PublicFields;
 
     public static TypeConverter GetConverter([DAM(ConverterAnnotation)] Type type)
     {
@@ -57,7 +59,8 @@ public static class TrimmableTypeConverter
         return new TypeConverter();
     }
 
-    public static TypeConverter GetConverter<[DAM(ConverterAnnotation)] T>() => GetConverter(typeof(T));
+    public static TypeConverter GetConverter<[DAM(ConverterAnnotation)] T>() =>
+        GetConverter(typeof(T));
 
     private static readonly ArrayConverter s_arrayConverter = new();
     private static readonly CollectionConverter s_collectionConverter = new();
@@ -90,4 +93,3 @@ public static class TrimmableTypeConverter
         return null;
     }
 }
-

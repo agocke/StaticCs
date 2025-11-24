@@ -1,4 +1,3 @@
-
 namespace StaticCs;
 
 public enum DiagId

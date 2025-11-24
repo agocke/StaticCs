@@ -1,18 +1,21 @@
 <Project>
-    <Import Project="$(MSBuildThisFileDirectory)PackageRedirects.props" Condition="Exists('$(MSBuildThisFileDirectory)PackageRedirects.props')" />
-    <ItemGroup>
-        <!-- Remove all items from PackageReference if they are in the PackageRedirect ItemGroup with a matching PackageName
+  <Import
+    Project="$(MSBuildThisFileDirectory)PackageRedirects.props"
+    Condition="Exists('$(MSBuildThisFileDirectory)PackageRedirects.props')"
+  />
+  <ItemGroup>
+    <!-- Remove all items from PackageReference if they are in the PackageRedirect ItemGroup with a matching PackageName
                 element. Then add a ProjectReference to the project with the item identity in PackageRedirect. -->
-        <_ExcludePackage Include="@(PackageRedirect)" Exclude="@(PackageReference)">
-            <MatchOnMetadata>PackageName</MatchOnMetadata>
-            <ProjectPath>%(PackageName)</ProjectPath>
-        </_ExcludePackage>
-        <_ExcludeProjects Include ="@(_ExcludePackage->Metadata('ProjectPath'))" />
-        <ProjectReference Include="@(PackageRedirect)" Exclude="@(_ExcludeProjects)">
-            <ReferenceOutputAssembly>%(PackageRedirect.ReferenceOutputAssembly)</ReferenceOutputAssembly>
-            <ItemOutputGroup>%(PackageRedirect.ItemOutputGroup)</ItemOutputGroup>
-        </ProjectReference>
+    <_ExcludePackage Include="@(PackageRedirect)" Exclude="@(PackageReference)">
+      <MatchOnMetadata>PackageName</MatchOnMetadata>
+      <ProjectPath>%(PackageName)</ProjectPath>
+    </_ExcludePackage>
+    <_ExcludeProjects Include="@(_ExcludePackage->Metadata('ProjectPath'))" />
+    <ProjectReference Include="@(PackageRedirect)" Exclude="@(_ExcludeProjects)">
+      <ReferenceOutputAssembly>%(PackageRedirect.ReferenceOutputAssembly)</ReferenceOutputAssembly>
+      <ItemOutputGroup>%(PackageRedirect.ItemOutputGroup)</ItemOutputGroup>
+    </ProjectReference>
 
-        <PackageReference Remove="%(PackageRedirect.PackageName)" />
-    </ItemGroup>
+    <PackageReference Remove="%(PackageRedirect.PackageName)" />
+  </ItemGroup>
 </Project>

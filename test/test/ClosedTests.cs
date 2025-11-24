@@ -30,9 +30,14 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(5,27): warning CS8524: The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value. For example, the pattern '(Rgb)3' is not covered.
-            DiagnosticResult.CompilerWarning("CS8524").WithSpan(5, 27, 5, 33).WithArguments("(Rgb)3"));
+            DiagnosticResult
+                .CompilerWarning("CS8524")
+                .WithSpan(5, 27, 5, 33)
+                .WithArguments("(Rgb)3")
+        );
     }
 
     [Fact]
@@ -52,9 +57,15 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(6,27): warning CS8524: The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value. For example, the pattern '(Rgb)3' is not covered.
-            DiagnosticResult.CompilerWarning("CS8524").WithSpan(6, 27, 6, 33).WithArguments("(Rgb)3").WithIsSuppressed(true));
+            DiagnosticResult
+                .CompilerWarning("CS8524")
+                .WithSpan(6, 27, 6, 33)
+                .WithArguments("(Rgb)3")
+                .WithIsSuppressed(true)
+        );
     }
 
     [Fact]
@@ -74,9 +85,11 @@ class C
     }
 }
 """;
-        await VerifyDiagnostics<EnumClosedConversionAnalyzer>(src,
+        await VerifyDiagnostics<EnumClosedConversionAnalyzer>(
+            src,
             // /0/Test0.cs(9,19): error STATICCS002: Integer conversions to [Closed] enum Rgb are disallowed
-            ClosedEnumConversion.WithSpan(9, 19, 9, 26).WithArguments("Rgb"));
+            ClosedEnumConversion.WithSpan(9, 19, 9, 26).WithArguments("Rgb")
+        );
     }
 
     [Fact]
@@ -107,9 +120,11 @@ class C
 class Base
 { }
 """;
-        await VerifyDiagnostics<ClosedDeclarationChecker>(src,
+        await VerifyDiagnostics<ClosedDeclarationChecker>(
+            src,
             // /0/Test0.cs(1,2): error STATICCS003: [Closed] is only valid on abstract classes/records with private constructors
-            ClassOrRecordMustBeClosed.WithSpan(1, 2, 1, 17));
+            ClassOrRecordMustBeClosed.WithSpan(1, 2, 1, 17)
+        );
     }
 
     [Fact]
@@ -119,9 +134,11 @@ class Base
 [StaticCs.Closed]
 abstract class Base { }
 """;
-        await VerifyDiagnostics<ClosedDeclarationChecker>(src,
+        await VerifyDiagnostics<ClosedDeclarationChecker>(
+            src,
             // /0/Test0.cs(1,2): error STATICCS003: [Closed] is only valid on abstract classes/records with private constructors
-            ClassOrRecordMustBeClosed.WithSpan(1, 2, 1, 17));
+            ClassOrRecordMustBeClosed.WithSpan(1, 2, 1, 17)
+        );
     }
 
     [Fact]
@@ -168,9 +185,11 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(8,24): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(8, 24, 8, 30).WithArguments("_"));
+            DiagnosticResult.CompilerWarning("CS8509").WithSpan(8, 24, 8, 30).WithArguments("_")
+        );
     }
 
     [Fact]
@@ -193,9 +212,15 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(10,24): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 24, 10, 30).WithArguments("_").WithIsSuppressed(true));
+            DiagnosticResult
+                .CompilerWarning("CS8509")
+                .WithSpan(10, 24, 10, 30)
+                .WithArguments("_")
+                .WithIsSuppressed(true)
+        );
     }
 
     [Fact]
@@ -217,9 +242,11 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(10,24): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 24, 10, 30).WithArguments("_"));
+            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 24, 10, 30).WithArguments("_")
+        );
     }
 
     [Fact]
@@ -242,9 +269,15 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(10,31): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 31, 10, 37).WithArguments("_").WithIsSuppressed(true));
+            DiagnosticResult
+                .CompilerWarning("CS8509")
+                .WithSpan(10, 31, 10, 37)
+                .WithArguments("_")
+                .WithIsSuppressed(true)
+        );
     }
 
     [Fact]
@@ -267,9 +300,14 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(10,31): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern 'Option<int>.Some(0) { }' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 31, 10, 37).WithArguments("Option<int>.Some(0) { }"));
+            DiagnosticResult
+                .CompilerWarning("CS8509")
+                .WithSpan(10, 31, 10, 37)
+                .WithArguments("Option<int>.Some(0) { }")
+        );
     }
 
     [Fact]
@@ -292,30 +330,47 @@ class C
     };
 }
 """;
-        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(src,
+        await VerifyDiagnostics<ClosedTypeCompletenessSuppressor>(
+            src,
             // /0/Test0.cs(10,24): warning CS8509: The switch expression does not handle all possible values of its input type (it is not exhaustive). For example, the pattern '_' is not covered.
-            DiagnosticResult.CompilerWarning("CS8509").WithSpan(10, 24, 10, 30).WithArguments("_").WithIsSuppressed(true));
+            DiagnosticResult
+                .CompilerWarning("CS8509")
+                .WithSpan(10, 24, 10, 30)
+                .WithArguments("_")
+                .WithIsSuppressed(true)
+        );
     }
 
-    private static readonly DiagnosticResult ClosedEnumConversion = CSharpAnalyzerVerifier<EnumClosedConversionAnalyzer, XUnitVerifier>.Diagnostic(DiagId.ClosedEnumConversion.ToIdString());
-    private static readonly DiagnosticResult ClassOrRecordMustBeClosed = CSharpAnalyzerVerifier<ClosedDeclarationChecker, XUnitVerifier>.Diagnostic(DiagId.ClassOrRecordMustBeClosed.ToIdString());
+    private static readonly DiagnosticResult ClosedEnumConversion = CSharpAnalyzerVerifier<
+        EnumClosedConversionAnalyzer,
+        XUnitVerifier
+    >.Diagnostic(DiagId.ClosedEnumConversion.ToIdString());
+    private static readonly DiagnosticResult ClassOrRecordMustBeClosed = CSharpAnalyzerVerifier<
+        ClosedDeclarationChecker,
+        XUnitVerifier
+    >.Diagnostic(DiagId.ClassOrRecordMustBeClosed.ToIdString());
 
-    private Task VerifyDiagnostics<TAnalyzer>(string src, params DiagnosticResult[] expected) where TAnalyzer : DiagnosticAnalyzer, new()
+    private Task VerifyDiagnostics<TAnalyzer>(string src, params DiagnosticResult[] expected)
+        where TAnalyzer : DiagnosticAnalyzer, new()
     {
         var test = new SuppressorTest<TAnalyzer>
         {
             TestCode = src,
             CompilerDiagnostics = CompilerDiagnostics.Warnings,
             ReferenceAssemblies = ReferenceAssemblies.Net.Net60,
-            TestBehaviors = TestBehaviors.SkipSuppressionCheck
+            TestBehaviors = TestBehaviors.SkipSuppressionCheck,
         };
         test.TestState.Sources.Add(
-            File.ReadAllText(Path.Combine(CurrentPath(), "../../../src/StaticCs.ContentFiles/ClosedAttribute.cs")));
+            File.ReadAllText(
+                Path.Combine(CurrentPath(), "../../../src/StaticCs.ContentFiles/ClosedAttribute.cs")
+            )
+        );
         test.ExpectedDiagnostics.AddRange(expected);
         return test.RunAsync();
     }
 
-    private static string CurrentPath([CallerFilePath] string? path = null) => path ?? throw new InvalidOperationException();
+    private static string CurrentPath([CallerFilePath] string? path = null) =>
+        path ?? throw new InvalidOperationException();
 }
 //using System;
 //using StaticCs;

@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -30,5 +29,4 @@
       <CopyToOutput>false</CopyToOutput>
     </None>
   </ItemGroup>
-
 </Project>

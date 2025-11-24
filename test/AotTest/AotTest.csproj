@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -18,5 +17,4 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.XUnitAssert" Version="9.0.0-beta.24060.5" />
   </ItemGroup>
-
 </Project>

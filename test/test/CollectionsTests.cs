@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using StaticCs.Collections;
 using Xunit;
@@ -9,7 +8,9 @@ public class CollectionsTests
 {
     private enum RGB
     {
-        Red, Green, Blue
+        Red,
+        Green,
+        Blue,
     }
 
     [Fact]
