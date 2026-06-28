@@ -70,6 +70,20 @@ partial record TypeRef
             case INamedTypeSymbol named:
                 var container = named.ContainingType is { } containingType ? From(containingType) : null;
                 var @namespace = container is null ? NamespaceName(named.ContainingNamespace) : string.Empty;
+
+                if (ExtensionMembers.IsExtension(named))
+                {
+                    // An extension block's metadata name is an unspeakable content hash that depends
+                    // on its members, so two compilations agree only when every member agrees.
+                    // Identify it structurally by its receiver type instead, so members are paired
+                    // by the receiver they extend, independent of their sibling members.
+                    var receiver = ExtensionMembers.Receiver(named);
+                    var receiverArgs = receiver is null
+                        ? default
+                        : EqArray<TypeRef>.From(new[] { From(receiver.Type) });
+                    return new Named(@namespace, container, ExtensionMembers.Name, receiverArgs);
+                }
+
                 return new Named(
                     @namespace,
                     container,
@@ -320,8 +334,13 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
         {
             case INamedTypeSymbol named:
             {
+                // Extension blocks share an unspeakable empty name; key them by their receiver so
+                // two blocks that extend different receivers are distinct and members never collide.
+                var isExtension = ExtensionMembers.IsExtension(named);
+                var name = isExtension ? ExtensionMembers.Name : named.Name;
+                var typeParameters = isExtension ? ExtensionReceiverKey(named) : default;
                 var identity = new MemberIdentity(
-                    ApiMemberKind.Type, @namespace, containingType, named.Name, named.Arity, default);
+                    ApiMemberKind.Type, @namespace, containingType, name, named.Arity, typeParameters);
                 var common = new CommonTypeAspects(flags);
                 return new ApiMember(identity, new SourceMember.Type(common), new BinaryMember.Type(common));
             }
@@ -401,6 +420,19 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
     // carried by ParamModifiers.RefReadOnly so it surfaces as a source-only modification.
     private static RefKind BinaryRefKind(RefKind refKind)
         => refKind == RefReadOnlyParameter ? RefKind.In : refKind;
+
+    /// <summary>
+    /// The identity contribution of an extension block: its receiver parameter, encoded as a single
+    /// <see cref="ParamKey"/>, so that <see cref="MemberIdentity"/> distinguishes blocks by the
+    /// receiver they extend (the receiver may reference the block's own type parameters).
+    /// </summary>
+    private static EqArray<ParamKey> ExtensionReceiverKey(INamedTypeSymbol extension)
+    {
+        var receiver = ExtensionMembers.Receiver(extension);
+        return receiver is null
+            ? default
+            : EqArray<ParamKey>.From(new[] { new ParamKey(TypeRef.From(receiver.Type), BinaryRefKind(receiver.RefKind)) });
+    }
 
     private static string FormatConstant(object? value)
         => value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";

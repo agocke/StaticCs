@@ -157,7 +157,16 @@ public static class CsSigWriter
                 builder.AppendLine(FormatMember(member));
             }
 
-            foreach (var nested in Sorted(type.GetMembers().OfType<INamedTypeSymbol>().Where(ApiSurface.IsTrackedApi)))
+            var nestedTypes = type.GetMembers().OfType<INamedTypeSymbol>().Where(ApiSurface.IsTrackedApi).ToList();
+
+            // Extension blocks are nested types with an unspeakable name; emit them as
+            // `extension(Receiver) { ... }` ordered by their header so the output is deterministic.
+            foreach (var extension in nestedTypes.Where(ExtensionMembers.IsExtension).OrderBy(ExtensionHeader, StringComparer.Ordinal))
+            {
+                WriteExtension(builder, extension);
+            }
+
+            foreach (var nested in Sorted(nestedTypes.Where(static t => !ExtensionMembers.IsExtension(t))))
             {
                 WriteType(builder, nested);
             }
@@ -165,6 +174,45 @@ public static class CsSigWriter
 
         builder.Dedent();
         builder.AppendLine("}");
+    }
+
+    private static void WriteExtension(IndentingBuilder builder, INamedTypeSymbol extension)
+    {
+        builder.AppendLine(ExtensionHeader(extension));
+        builder.AppendLine("{");
+        builder.Indent();
+
+        foreach (var member in Sorted(VisibleMembers(extension)))
+        {
+            builder.AppendLine(FormatMember(member));
+        }
+
+        builder.Dedent();
+        builder.AppendLine("}");
+    }
+
+    /// <summary>The header of an extension block, e.g. <c>extension(int)</c> or
+    /// <c>extension&lt;T&gt;(T[] source)</c>. The receiver is the block's marker type's receiver
+    /// parameter; its name is emitted only when the source declared one.</summary>
+    private static string ExtensionHeader(INamedTypeSymbol extension)
+    {
+        var receiver = ExtensionMembers.Receiver(extension);
+        var receiverText = receiver is null ? string.Empty : FormatReceiver(receiver);
+        return $"extension{TypeParameterList(extension)}({receiverText})";
+    }
+
+    private static string FormatReceiver(IParameterSymbol receiver)
+    {
+        var prefix = receiver.RefKind switch
+        {
+            RefKind.Ref => "ref ",
+            RefKind.Out => "out ",
+            RefKind.In => "in ",
+            _ => string.Empty,
+        };
+
+        var type = prefix + receiver.Type.ToDisplayString(s_typeFormat);
+        return receiver.Name.Length == 0 ? type : type + " " + receiver.Name;
     }
 
     /// <summary>Generates the body-less declaration text of a single member, exactly as it should

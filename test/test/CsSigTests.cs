@@ -577,6 +577,95 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task RoundTripExtensionMembers()
+    {
+        // C# 14 extension blocks: each `extension(Receiver) { ... }` is modelled by Roslyn as a
+        // nested type with an unspeakable name. The writer must emit it as an `extension(...)` block
+        // (not a nameless `class`), and the round-trip must produce no diagnostics.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public static class Ext
+                {
+                    extension(int[])
+                    {
+                        public static string Describe => "ints";
+                    }
+                    extension<T>(T[] source)
+                    {
+                        public int Count2 => source.Length;
+                        public bool TryFirst(out T value) { value = default!; return false; }
+                        public static T[] Empty => System.Array.Empty<T>();
+                    }
+                }
+            }
+            """, nullable: true, languageVersion: LanguageVersion.Preview);
+    }
+
+    [Fact]
+    public async Task ExtensionMemberMissingFromProjectReported()
+    {
+        var source = """
+            namespace N;
+            public static class Ext
+            {
+                extension<T>(T[] source)
+                {
+                    public int Count2 => source.Length;
+                }
+            }
+            """;
+        var sig = """
+            namespace N
+            {
+                public static class Ext
+                {
+                    extension<T>(T[] source)
+                    {
+                        public int Count2 { get; }
+                        public static int Bogus { get; }
+                    }
+                }
+            }
+            """;
+        // `Bogus` is declared in the signature but absent from the project: exactly one report.
+        var diagnostic = Assert.Single(await RunPreviewAsync(source, sig));
+        Assert.Equal("CSSIG001", diagnostic.Id);
+    }
+
+    [Fact]
+    public async Task ExtensionMemberMissingFromSignatureReported()
+    {
+        var source = """
+            namespace N;
+            public static class Ext
+            {
+                extension<T>(T[] source)
+                {
+                    public int Count2 => source.Length;
+                    public static T[] Empty => System.Array.Empty<T>();
+                }
+            }
+            """;
+        var sig = """
+            namespace N
+            {
+                public static class Ext
+                {
+                    extension<T>(T[] source)
+                    {
+                        public int Count2 { get; }
+                    }
+                }
+            }
+            """;
+        // `Empty` exists in the project but is not declared: exactly one report (no double-count
+        // from the implicit implementation method the compiler synthesises on the static class).
+        var diagnostic = Assert.Single(await RunPreviewAsync(source, sig));
+        Assert.Equal("CSSIG002", diagnostic.Id);
+    }
+
+    [Fact]
     public async Task RoundTripFunctionPointerAndVolatile()
     {
         await AssertRoundTripsAsync("""
@@ -593,7 +682,8 @@ public class CsSigTests
 
     /// <summary>Generates a <c>.cssig</c> from <paramref name="source"/> and asserts that feeding it
     /// back through the analyzer reports no diagnostics.</summary>
-    private static async Task AssertRoundTripsAsync(string source, bool nullable = false)
+    private static async Task AssertRoundTripsAsync(
+        string source, bool nullable = false, LanguageVersion languageVersion = LanguageVersion.Default)
     {
         var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
         var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
@@ -604,14 +694,12 @@ public class CsSigTests
 
         var compilation = CSharpCompilation.Create(
             "TestProject",
-            new[] { CSharpSyntaxTree.ParseText(source, path: "Test.cs") },
+            new[] { CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion), path: "Test.cs") },
             references,
             compilationOptions);
 
         var generated = CsSigWriter.Write(compilation);
-        var diagnostics = nullable
-            ? await RunNullableAsync(source, generated)
-            : await RunAsync(source, generated);
+        var diagnostics = await RunCoreAsync(source, equivalence: null, nullable, languageVersion, generated);
         Assert.Empty(diagnostics);
     }
 
@@ -1082,24 +1170,28 @@ public class CsSigTests
     }
 
     private static Task<ImmutableArray<Diagnostic>> RunAsync(string source, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence: null, nullable: false, signatureFiles);
+        => RunCoreAsync(source, equivalence: null, nullable: false, LanguageVersion.Default, signatureFiles);
+
+    private static Task<ImmutableArray<Diagnostic>> RunPreviewAsync(string source, params string[] signatureFiles)
+        => RunCoreAsync(source, equivalence: null, nullable: true, LanguageVersion.Preview, signatureFiles);
 
     private static Task<ImmutableArray<Diagnostic>> RunNullableAsync(string source, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence: null, nullable: true, signatureFiles);
+        => RunCoreAsync(source, equivalence: null, nullable: true, LanguageVersion.Default, signatureFiles);
 
     private static Task<ImmutableArray<Diagnostic>> RunWithEquivalenceAsync(
         string source, string? equivalence, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence, nullable: false, signatureFiles);
+        => RunCoreAsync(source, equivalence, nullable: false, LanguageVersion.Default, signatureFiles);
 
     private static Task<ImmutableArray<Diagnostic>> RunNullableWithEquivalenceAsync(
         string source, string? equivalence, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence, nullable: true, signatureFiles);
+        => RunCoreAsync(source, equivalence, nullable: true, LanguageVersion.Default, signatureFiles);
 
     private static async Task<ImmutableArray<Diagnostic>> RunCoreAsync(
-        string source, string? equivalence, bool nullable, params string[] signatureFiles)
+        string source, string? equivalence, bool nullable, LanguageVersion languageVersion, params string[] signatureFiles)
     {
         var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
 
+        var parseOptions = new CSharpParseOptions(languageVersion);
         var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
         if (nullable)
         {
@@ -1108,7 +1200,7 @@ public class CsSigTests
 
         var compilation = CSharpCompilation.Create(
             "TestProject",
-            new[] { CSharpSyntaxTree.ParseText(source, path: "Test.cs") },
+            new[] { CSharpSyntaxTree.ParseText(source, parseOptions, path: "Test.cs") },
             references,
             compilationOptions);
 

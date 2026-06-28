@@ -126,8 +126,19 @@ internal static class ApiSurface
 
         // Implicitly declared members of a record (Equals, GetHashCode, Deconstruct, copy ctor,
         // positional property accessors, ...).
+        //
+        // A static class hosting extension blocks also carries implicit *implementation* methods
+        // for each extension member (e.g. `get_Empty`, `TryFirst`). Those are implementation
+        // details: the members themselves are tracked through the extension marker types, so skip
+        // the implicit-method pass for such classes to avoid double-counting.
+        bool hostsExtensions = ExtensionMembers.ContainsExtension(type);
         foreach (var member in type.GetMembers())
         {
+            if (hostsExtensions)
+            {
+                break;
+            }
+
             if (SymbolEqualityComparer.Default.Equals(member, implicitConstructor))
             {
                 continue;
