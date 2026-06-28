@@ -52,8 +52,8 @@ internal static class SymbolVisibilityExtensions
                     visibility = SymbolVisibility.Internal;
                     break;
 
-                    // For anything else (Public, Protected, ProtectedOrInternal), the
-                    // symbol stays at the level we've gotten so far.
+                // For anything else (Public, Protected, ProtectedOrInternal), the
+                // symbol stays at the level we've gotten so far.
             }
 
             current = current.ContainingSymbol;

@@ -26,7 +26,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         messageFormat: "The signature '{0}' is declared in a .cssig file but is not part of the project's public API (breaks {1} equivalence)",
         category: "CsSig",
         defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true
+    );
 
     private static readonly DiagnosticDescriptor s_missingFromSignature = new(
         id: DiagId.MissingFromSignature.ToIdString(),
@@ -34,7 +35,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         messageFormat: "The signature '{0}' is part of the project's public API but is not declared in any .cssig file (breaks {1} equivalence)",
         category: "CsSig",
         defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true
+    );
 
     private static readonly DiagnosticDescriptor s_signatureFileError = new(
         id: DiagId.SignatureFileError.ToIdString(),
@@ -42,7 +44,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         messageFormat: "The .cssig file could not be parsed: {0}",
         category: "CsSig",
         defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true
+    );
 
     private static readonly DiagnosticDescriptor s_signatureMismatch = new(
         id: DiagId.SignatureMismatch.ToIdString(),
@@ -50,11 +53,17 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         messageFormat: "The signature '{0}' is declared in a .cssig file but does not match the project's public API (breaks {1} equivalence)",
         category: "CsSig",
         defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true
+    );
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
         ImmutableArray.Create(
-            s_missingFromProject, s_missingFromSignature, s_signatureFileError, s_signatureMismatch, CsSigRecognizer.Rule);
+            s_missingFromProject,
+            s_missingFromSignature,
+            s_signatureFileError,
+            s_signatureMismatch,
+            CsSigRecognizer.Rule
+        );
 
     public override void Initialize(AnalysisContext context)
     {
@@ -67,8 +76,10 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
     {
         var compilation = context.Compilation;
 
-        var sigFiles = context.Options.AdditionalFiles
-            .Where(static f => f.Path.EndsWith(Extension, System.StringComparison.OrdinalIgnoreCase))
+        var sigFiles = context
+            .Options.AdditionalFiles.Where(static f =>
+                f.Path.EndsWith(Extension, System.StringComparison.OrdinalIgnoreCase)
+            )
             .ToImmutableArray();
 
         // Nothing to enforce unless the project declares signatures. When one or more .cssig
@@ -78,7 +89,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var parseOptions = compilation.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions
+        var parseOptions =
+            compilation.SyntaxTrees.FirstOrDefault()?.Options as CSharpParseOptions
             ?? CSharpParseOptions.Default;
 
         var sigTrees = new List<SyntaxTree>(sigFiles.Length);
@@ -91,17 +103,25 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var tree = CSharpSyntaxTree.ParseText(text, parseOptions, path: file.Path, cancellationToken: context.CancellationToken);
+            var tree = CSharpSyntaxTree.ParseText(
+                text,
+                parseOptions,
+                path: file.Path,
+                cancellationToken: context.CancellationToken
+            );
 
             foreach (var diagnostic in tree.GetDiagnostics(context.CancellationToken))
             {
                 if (diagnostic.Severity == DiagnosticSeverity.Error)
                 {
                     hadParseError = true;
-                    context.ReportDiagnostic(Diagnostic.Create(
-                        s_signatureFileError,
-                        CsSigLocation.ToExternal(diagnostic.Location, file.Path),
-                        diagnostic.GetMessage()));
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(
+                            s_signatureFileError,
+                            CsSigLocation.ToExternal(diagnostic.Location, file.Path),
+                            diagnostic.GetMessage()
+                        )
+                    );
                 }
             }
 
@@ -126,7 +146,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             "__cssig__",
             sigTrees,
             compilation.References,
-            compilation.Options as CSharpCompilationOptions);
+            compilation.Options as CSharpCompilationOptions
+        );
 
         var declared = ApiSurface.Collect(sigCompilation.Assembly);
         var actual = ApiSurface.Collect(compilation.Assembly);
@@ -141,30 +162,40 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             {
                 // Declared in a .cssig file but missing from the project. An add/remove breaks
                 // whichever equivalence is being enforced.
-                context.ReportDiagnostic(Diagnostic.Create(
-                    s_missingFromProject,
-                    CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
-                    pair.Value.Display,
-                    Describe(mode)));
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        s_missingFromProject,
+                        CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
+                        pair.Value.Display,
+                        Describe(mode)
+                    )
+                );
                 continue;
             }
 
             // Present on both sides: the identities match, so compare the equivalence projections
             // that are active. A common-aspect change differs in both views, yielding a single
             // diagnostic labelled with both equivalences.
-            var sourceDiffers = (mode & Equivalence.Source) != 0
+            var sourceDiffers =
+                (mode & Equivalence.Source) != 0
                 && !Equals(pair.Value.Member.Source, actualEntry.Member.Source);
-            var binaryDiffers = (mode & Equivalence.Binary) != 0
+            var binaryDiffers =
+                (mode & Equivalence.Binary) != 0
                 && !Equals(pair.Value.Member.Binary, actualEntry.Member.Binary);
 
             if (sourceDiffers || binaryDiffers)
             {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    s_signatureMismatch,
-                    CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
-                    pair.Value.Display,
-                    Describe(
-                        (sourceDiffers ? Equivalence.Source : 0) | (binaryDiffers ? Equivalence.Binary : 0))));
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        s_signatureMismatch,
+                        CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
+                        pair.Value.Display,
+                        Describe(
+                            (sourceDiffers ? Equivalence.Source : 0)
+                                | (binaryDiffers ? Equivalence.Binary : 0)
+                        )
+                    )
+                );
             }
         }
 
@@ -174,11 +205,14 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             context.CancellationToken.ThrowIfCancellationRequested();
             if (!declared.ContainsKey(pair.Key))
             {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    s_missingFromSignature,
-                    pair.Value.Location,
-                    pair.Value.Display,
-                    Describe(mode)));
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        s_missingFromSignature,
+                        pair.Value.Location,
+                        pair.Value.Display,
+                        Describe(mode)
+                    )
+                );
             }
         }
     }
@@ -189,9 +223,12 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
     /// </summary>
     private static Equivalence ReadEquivalence(AnalyzerOptions options)
     {
-        if (options.AnalyzerConfigOptionsProvider.GlobalOptions
-                .TryGetValue("build_property.CsSigEquivalence", out var raw)
-            && !string.IsNullOrWhiteSpace(raw))
+        if (
+            options.AnalyzerConfigOptionsProvider.GlobalOptions.TryGetValue(
+                "build_property.CsSigEquivalence",
+                out var raw
+            ) && !string.IsNullOrWhiteSpace(raw)
+        )
         {
             switch (raw.Trim().ToLowerInvariant())
             {
@@ -208,13 +245,14 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         return Equivalence.Both;
     }
 
-    private static string Describe(Equivalence equivalence) => equivalence switch
-    {
-        Equivalence.Source => "source",
-        Equivalence.Binary => "binary",
-        Equivalence.Both => "source and binary",
-        _ => "no",
-    };
+    private static string Describe(Equivalence equivalence) =>
+        equivalence switch
+        {
+            Equivalence.Source => "source",
+            Equivalence.Binary => "binary",
+            Equivalence.Both => "source and binary",
+            _ => "no",
+        };
 }
 
 /// <summary>The equivalence relation(s) the analyzer enforces between project and signatures.</summary>

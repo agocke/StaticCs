@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -17,5 +16,4 @@
     <!-- Source-only package: IndentingBuilder.cs is compiled directly into StaticCs.CsSig.Analyzers.dll. -->
     <PackageReference Include="StaticCS.IndentingBuilder" Version="0.3.0" PrivateAssets="all" />
   </ItemGroup>
-
 </Project>

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -29,7 +28,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" PrivateAssets="all" />
+    <PackageReference
+      Include="Microsoft.CodeAnalysis.CSharp.Workspaces"
+      Version="5.0.0"
+      PrivateAssets="all"
+    />
     <ProjectReference Include="../Analyzer/StaticCs.CsSig.Analyzers.csproj" PrivateAssets="all" />
   </ItemGroup>
 
@@ -39,10 +42,23 @@
     separate assembly. The host (the IDE / compiler) supplies the Microsoft.CodeAnalysis.* assemblies.
   -->
   <ItemGroup>
-    <None Include="$(OutputPath)/StaticCs.CsSig.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="$(OutputPath)/StaticCs.CsSig.CodeFixes.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="../Analyzer/build/StaticCS.CsSig.props" Pack="true" PackagePath="build/StaticCS.CsSig.props" />
+    <None
+      Include="$(OutputPath)/StaticCs.CsSig.Analyzers.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
+    <None
+      Include="$(OutputPath)/StaticCs.CsSig.CodeFixes.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false"
+    />
+    <None
+      Include="../Analyzer/build/StaticCS.CsSig.props"
+      Pack="true"
+      PackagePath="build/StaticCS.CsSig.props"
+    />
     <None Include="../Analyzer/README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
-
 </Project>

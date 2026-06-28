@@ -39,13 +39,17 @@ internal static class CsSigRecognizer
         messageFormat: "{0}",
         category: "CsSig",
         defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true
+    );
 
     /// <summary>
     /// Recognizes <paramref name="tree"/> against the <c>.cssig</c> grammar, yielding a diagnostic
     /// for every construct that the grammar does not allow.
     /// </summary>
-    public static IEnumerable<Diagnostic> Recognize(SyntaxTree tree, CancellationToken cancellationToken = default)
+    public static IEnumerable<Diagnostic> Recognize(
+        SyntaxTree tree,
+        CancellationToken cancellationToken = default
+    )
     {
         var walker = new Walker(tree.FilePath);
         walker.Visit(tree.GetRoot(cancellationToken));
@@ -60,12 +64,17 @@ internal static class CsSigRecognizer
 
         public List<Diagnostic> Diagnostics { get; } = new();
 
-        private void Report(Location location, string message)
-            => Diagnostics.Add(Diagnostic.Create(Rule, CsSigLocation.ToExternal(location, _path), message));
+        private void Report(Location location, string message) =>
+            Diagnostics.Add(
+                Diagnostic.Create(Rule, CsSigLocation.ToExternal(location, _path), message)
+            );
 
-        private static bool IsAccessibility(SyntaxKind kind)
-            => kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword
-                or SyntaxKind.ProtectedKeyword or SyntaxKind.InternalKeyword;
+        private static bool IsAccessibility(SyntaxKind kind) =>
+            kind
+                is SyntaxKind.PublicKeyword
+                    or SyntaxKind.PrivateKeyword
+                    or SyntaxKind.ProtectedKeyword
+                    or SyntaxKind.InternalKeyword;
 
         /// <summary>
         /// Modifiers allowed on a virtualizable member (method, property, indexer, event): the
@@ -109,7 +118,8 @@ internal static class CsSigRecognizer
 
                 Report(
                     modifier.GetLocation(),
-                    $"The '{modifier.ValueText}' modifier does not affect the signature and is not allowed in a .cssig file");
+                    $"The '{modifier.ValueText}' modifier does not affect the signature and is not allowed in a .cssig file"
+                );
             }
         }
 
@@ -119,14 +129,16 @@ internal static class CsSigRecognizer
             {
                 Report(
                     body.GetLocation(),
-                    "Member bodies are not allowed in a .cssig file; signatures declare members without an implementation");
+                    "Member bodies are not allowed in a .cssig file; signatures declare members without an implementation"
+                );
             }
 
             if (expressionBody is not null)
             {
                 Report(
                     expressionBody.GetLocation(),
-                    "Expression bodies are not allowed in a .cssig file; signatures declare members without an implementation");
+                    "Expression bodies are not allowed in a .cssig file; signatures declare members without an implementation"
+                );
             }
         }
 
@@ -134,7 +146,12 @@ internal static class CsSigRecognizer
         {
             // 'static'/'abstract'/'sealed' all affect the type's signature (instantiation,
             // extensibility of protected members, virtual dispatch).
-            CheckModifiers(node.Modifiers, SyntaxKind.StaticKeyword, SyntaxKind.AbstractKeyword, SyntaxKind.SealedKeyword);
+            CheckModifiers(
+                node.Modifiers,
+                SyntaxKind.StaticKeyword,
+                SyntaxKind.AbstractKeyword,
+                SyntaxKind.SealedKeyword
+            );
             base.VisitClassDeclaration(node);
         }
 
@@ -159,7 +176,12 @@ internal static class CsSigRecognizer
             }
             else
             {
-                CheckModifiers(node.Modifiers, SyntaxKind.StaticKeyword, SyntaxKind.AbstractKeyword, SyntaxKind.SealedKeyword);
+                CheckModifiers(
+                    node.Modifiers,
+                    SyntaxKind.StaticKeyword,
+                    SyntaxKind.AbstractKeyword,
+                    SyntaxKind.SealedKeyword
+                );
             }
 
             base.VisitRecordDeclaration(node);
@@ -193,7 +215,9 @@ internal static class CsSigRecognizer
             base.VisitOperatorDeclaration(node);
         }
 
-        public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node)
+        public override void VisitConversionOperatorDeclaration(
+            ConversionOperatorDeclarationSyntax node
+        )
         {
             CheckModifiers(node.Modifiers, SyntaxKind.StaticKeyword);
             RejectBody(node.Body, node.ExpressionBody);
@@ -244,7 +268,12 @@ internal static class CsSigRecognizer
         {
             // 'static' -> ApiMember.IsStatic; 'const' -> the captured constant value;
             // 'readonly' -> the field's read-only-ness (observable to external writers).
-            CheckModifiers(node.Modifiers, SyntaxKind.StaticKeyword, SyntaxKind.ConstKeyword, SyntaxKind.ReadOnlyKeyword);
+            CheckModifiers(
+                node.Modifiers,
+                SyntaxKind.StaticKeyword,
+                SyntaxKind.ConstKeyword,
+                SyntaxKind.ReadOnlyKeyword
+            );
 
             // A field's value is only part of the signature when it is 'const'; any other
             // initializer is invisible to the comparison.
@@ -256,7 +285,8 @@ internal static class CsSigRecognizer
                     {
                         Report(
                             initializer.GetLocation(),
-                            "A field initializer does not affect the signature and is not allowed in a .cssig file; only 'const' values are part of the signature");
+                            "A field initializer does not affect the signature and is not allowed in a .cssig file; only 'const' values are part of the signature"
+                        );
                     }
                 }
             }

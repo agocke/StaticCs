@@ -1,12 +1,13 @@
 <Project>
-
   <!--
     Automatically treat *.cssig files in the project as AdditionalFiles so the CsSig analyzer
     can read them. Set <EnableCsSigAnalyzer>false</EnableCsSigAnalyzer> to opt out.
   -->
   <ItemGroup Condition="'$(EnableCsSigAnalyzer)' != 'false'">
-    <AdditionalFiles Include="**/*.cssig"
-                     Exclude="$(BaseIntermediateOutputPath)**/*.cssig;$(BaseOutputPath)**/*.cssig;bin/**/*.cssig;obj/**/*.cssig" />
+    <AdditionalFiles
+      Include="**/*.cssig"
+      Exclude="$(BaseIntermediateOutputPath)**/*.cssig;$(BaseOutputPath)**/*.cssig;bin/**/*.cssig;obj/**/*.cssig"
+    />
   </ItemGroup>
 
   <!--
@@ -20,5 +21,4 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="CsSigEquivalence" />
   </ItemGroup>
-
 </Project>
