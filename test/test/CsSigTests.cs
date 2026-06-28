@@ -113,6 +113,55 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task NonPublicVisibilityInSignatureRejected()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                public int M();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                private int A();
+                internal int B();
+                private protected int D();
+                public int M();
+            }
+            """;
+        // private, a bare internal, and private protected name non-public members, which the .cssig
+        // grammar cannot express.
+        var diagnostics = await RunAsync(source, sig);
+        Assert.Equal(3, diagnostics.Count(d => d.Id == "CSSIG004"));
+    }
+
+    [Fact]
+    public async Task ProtectedVisibilitiesInSignatureAllowed()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                protected int A();
+                protected internal int B();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                protected int A();
+                protected internal int B();
+            }
+            """;
+        // protected and protected internal are part of the extensible surface and are allowed.
+        Assert.DoesNotContain(await RunAsync(source, sig), d => d.Id == "CSSIG004");
+    }
+
+    [Fact]
     public async Task ChangedReturnTypeReportsMismatch()
     {
         var source = """

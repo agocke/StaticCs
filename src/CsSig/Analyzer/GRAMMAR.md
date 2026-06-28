@@ -42,8 +42,9 @@ Legal type declarations are `class`, `struct`, `interface`, `record` (class or s
 | `class`, `record class`| accessibility, `static`, `abstract`, `sealed` | packed into `CommonTypeAspects.Flags`; `abstract`/`sealed` affect instantiability, virtual dispatch, and whether protected members surface (`CanTypeBeExtended`) |
 | `struct`, `record struct`, `interface`, `enum`, `delegate` | accessibility            | structs are always sealed/never static; the rest have no observable type modifier |
 
-"accessibility" means any of `public`, `private`, `protected`, `internal` (including the
-combinations `protected internal` and `private protected`).
+"accessibility" means any visibility that names part of the public surface: `public`, `protected`,
+or `protected internal`. The non-public visibilities `private`, a bare `internal`, and `private
+protected` are rejected (`CSSIG004`) — they cannot appear on any member, accessor, or type.
 
 ## Members
 
@@ -54,7 +55,7 @@ combinations `protected internal` and `private protected`).
 | constructor                                | accessibility                    | none             | constructor accessibility feeds `CanTypeBeExtended`             |
 | destructor                                 | (none)                           | none             |                                                                 |
 | property, indexer                          | accessibility, `static`, `virtual`, `abstract`, `override`, `sealed`, `readonly` | no expression body | accessors are written as `{ get; set; }` (see below); `readonly` allowed on struct members |
-| accessor (`get` / `set` / `init`)          | accessibility                    | none             | `private set` etc. controls whether the accessor surfaces       |
+| accessor (`get` / `set` / `init`)          | accessibility                    | none             | a non-public accessor (`internal set`) is rejected; omit the accessor instead   |
 | event (field-form or with accessors)       | accessibility, `static`, `virtual`, `abstract`, `override`, `sealed` | n/a | typically `event T E;`                                          |
 | field                                      | accessibility, `static`, `const`, `readonly` | n/a  | initializer allowed **only** with `const` (see below)           |
 | enum member                                | (none)                           | n/a              | an explicit `= value` is allowed and is part of the signature   |
