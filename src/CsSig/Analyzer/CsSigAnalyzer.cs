@@ -149,8 +149,8 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             compilation.Options as CSharpCompilationOptions
         );
 
-        var declared = ApiSurface.Collect(sigCompilation.Assembly);
-        var actual = ApiSurface.Collect(compilation.Assembly);
+        var declared = ApiSurface.Collect(sigCompilation.Assembly, isDeclaration: true);
+        var actual = ApiSurface.Collect(compilation.Assembly, isDeclaration: false);
 
         var mode = ReadEquivalence(context.Options);
 

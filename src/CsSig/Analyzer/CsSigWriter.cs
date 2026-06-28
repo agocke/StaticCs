@@ -158,15 +158,6 @@ public static class CsSigWriter
         }
         else
         {
-            if (NeedsConstructorSuppression(type))
-            {
-                // A body-less class with no written constructor would have a public parameterless
-                // constructor synthesized by the compiler when the .cssig is parsed. The real type's
-                // constructors are all inaccessible, so it exposes none — emit a private stub to
-                // block that synthesis and keep the signature faithful.
-                builder.AppendLine($"private {type.Name}();");
-            }
-
             foreach (var member in Sorted(VisibleMembers(type)))
             {
                 builder.AppendLine(FormatMember(member));
@@ -313,6 +304,15 @@ public static class CsSigWriter
         if (PrimaryConstructor(type) is { } primary)
         {
             name += "(" + FormatParameters(primary.Parameters) + ")";
+        }
+        // An accessible implicit parameterless constructor is real public API the project could
+        // remove or make private, so it is declared explicitly via primary-constructor syntax (a
+        // bare `()` after the type name) rather than left to synthesis. The analyzer ignores
+        // synthesized parameterless constructors on the declaration side, so a class with only an
+        // inaccessible constructor declares no `()` and no private member appears in the signature.
+        else if (ImplicitParameterlessConstructor(type) is not null)
+        {
+            name += "()";
         }
 
         parts.Add(name);
@@ -500,36 +500,23 @@ public static class CsSigWriter
             _ => ApiSurface.IsTrackedApi(member),
         };
 
-    /// <summary>Whether a non-public parameterless constructor stub must be written for
-    /// <paramref name="type"/> to stop the compiler from synthesizing a <em>public</em> implicit
-    /// constructor when the body-less signature is parsed. This is needed exactly when the type
-    /// declares constructors (so no public implicit one exists) yet none are externally visible (so
-    /// the writer emits none, leaving nothing to block synthesis).</summary>
-    private static bool NeedsConstructorSuppression(INamedTypeSymbol type)
+    /// <summary>The implicitly synthesized parameterless constructor of a class that is part of the
+    /// public surface (accessible), or <c>null</c> when the type has none or it is inaccessible.
+    /// Structs are excluded: their parameterless constructor is always public on both sides, so it
+    /// need not be written. This is the one implicit member whose presence and accessibility can vary
+    /// independently of the declaration, so it is emitted explicitly rather than left to synthesis.</summary>
+    private static IMethodSymbol? ImplicitParameterlessConstructor(INamedTypeSymbol type)
     {
-        if (type.TypeKind != TypeKind.Class || type.IsStatic)
+        if (type.TypeKind != TypeKind.Class)
         {
-            return false;
+            return null;
         }
 
-        var constructors = type.InstanceConstructors;
-        // No declared constructor means the public implicit one is genuine; let it be synthesized.
-        if (!constructors.Any(static c => !c.IsImplicitlyDeclared))
-        {
-            return false;
-        }
+        var constructor = type.InstanceConstructors.FirstOrDefault(static c =>
+            c.IsImplicitlyDeclared && c.Parameters.IsEmpty
+        );
 
-        // A positional record declares its primary constructor in the type header, which already
-        // blocks parameterless-constructor synthesis.
-        if (PrimaryConstructor(type) is not null)
-        {
-            return false;
-        }
-
-        // If the writer emits any explicit constructor it already blocks synthesis. Only the
-        // constructors that VisibleMembers yields are emitted; an implicit (e.g. record copy)
-        // constructor is tracked but never written, so it does not count here.
-        return !constructors.Any(static c => !c.IsImplicitlyDeclared && IsVisible(c));
+        return constructor is not null && IsVisible(constructor) ? constructor : null;
     }
 
 
