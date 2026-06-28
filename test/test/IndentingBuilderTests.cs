@@ -5,7 +5,7 @@ using Xunit;
 
 namespace StaticCs.Tests;
 
-// IndentingBuilder is also compiled into CsSig.Analyzers (it consumes the source-only
+// IndentingBuilder is also compiled into StaticCs.CsSig.Analyzers (it consumes the source-only
 // StaticCS.IndentingBuilder package), so the simple name is ambiguous in this project. Bind it to
 // the standalone IndentingBuilder library under test via the IbLib alias.
 using IndentingBuilder = IbLib::StaticCs.IndentingBuilder;

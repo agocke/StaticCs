@@ -26,8 +26,8 @@
     <ProjectReference Include="../../src/Async/StaticCs.Async.csproj" />
     <ProjectReference Include="../../src/StaticCs/StaticCs.csproj" />
     <ProjectReference Include="../../src/IndentingBuilder/IndentingBuilder.csproj" Aliases="IbLib" />
-    <ProjectReference Include="../../src/CsSig/Analyzer/CsSig.csproj" />
-    <ProjectReference Include="../../src/CsSig/CodeFixes/CsSig.CodeFixes.csproj" />
+    <ProjectReference Include="../../src/CsSig/Analyzer/StaticCs.CsSig.Analyzers.csproj" />
+    <ProjectReference Include="../../src/CsSig/CodeFixes/StaticCs.CsSig.CodeFixes.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,16 +4,16 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>CsSig.Analyzers</AssemblyName>
+    <AssemblyName>StaticCs.CsSig.Analyzers</AssemblyName>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 
-    <!-- Packaged by CsSig.CodeFixes.csproj, which ships this assembly alongside the code fixes. -->
+    <!-- Packaged by StaticCs.CsSig.CodeFixes.csproj, which ships this assembly alongside the code fixes. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.0" />
-    <!-- Source-only package: IndentingBuilder.cs is compiled directly into CsSig.Analyzers.dll. -->
+    <!-- Source-only package: IndentingBuilder.cs is compiled directly into StaticCs.CsSig.Analyzers.dll. -->
     <PackageReference Include="StaticCS.IndentingBuilder" Version="0.3.0" PrivateAssets="all" />
   </ItemGroup>
 
