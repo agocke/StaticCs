@@ -11,7 +11,7 @@ written without bodies.
 Copy or symlink this folder into your VS Code extensions directory:
 
 ```sh
-ln -s "$(pwd)" ~/.vscode/extensions/static-cs.cssig-0.1.0
+ln -s "$(pwd)" ~/.vscode/extensions/staticcs.cssig-0.1.0
 ```
 
 Then reload VS Code. Files ending in `.cssig` will be highlighted using the `source.cssig` grammar.

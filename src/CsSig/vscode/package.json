@@ -3,12 +3,22 @@
     "displayName": "C# Signature (.cssig)",
     "description": "Syntax highlighting for C# signature (.cssig) files used by the CsSig analyzer.",
     "version": "0.1.0",
-    "publisher": "static-cs",
-    "license": "BSD-3-Clause",
+    "publisher": "staticcs",
+    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/agocke/static-cs"
     },
+    "bugs": {
+        "url": "https://github.com/agocke/static-cs/issues"
+    },
+    "homepage": "https://github.com/agocke/static-cs/tree/main/src/CsSig",
+    "keywords": [
+        "cssig",
+        "csharp",
+        "public api",
+        "signature"
+    ],
     "engines": {
         "vscode": "^1.60.0"
     },
