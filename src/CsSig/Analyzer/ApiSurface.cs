@@ -54,17 +54,37 @@ internal static class ApiSurface
 
         foreach (var type in AllNamedTypes(assembly.GlobalNamespace))
         {
-            if (!IsTrackedApi(type))
-            {
-                continue;
-            }
-
-            Add(type);
-
-            AddApiMembers(type, Add, isDeclaration);
+            CollectInto(type, map, isDeclaration);
         }
 
         return map;
+    }
+
+    /// <summary>
+    /// Collects the tracked entries contributed by a single type (the type itself and its members),
+    /// so per-symbol analysis can diff one type at a time against the declared surface.
+    /// </summary>
+    public static Dictionary<MemberIdentity, ApiEntry> CollectType(INamedTypeSymbol type, bool isDeclaration)
+    {
+        var map = new Dictionary<MemberIdentity, ApiEntry>();
+        CollectInto(type, map, isDeclaration);
+        return map;
+    }
+
+    private static void CollectInto(
+        INamedTypeSymbol type,
+        Dictionary<MemberIdentity, ApiEntry> map,
+        bool isDeclaration
+    )
+    {
+        if (!IsTrackedApi(type))
+        {
+            return;
+        }
+
+        Add(type);
+
+        AddApiMembers(type, Add, isDeclaration);
 
         void Add(ISymbol symbol)
         {
