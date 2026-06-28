@@ -22,7 +22,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(string s) => s.Length;
                 public string Name { get; set; } = "";
@@ -30,7 +30,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(string s);
                 public string Name { get; set; }
@@ -45,14 +45,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M();
                 public int Extra();
@@ -68,7 +68,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int Extra() => 1;
@@ -76,7 +76,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M();
             }
@@ -91,7 +91,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 internal int Hidden() => 1;
@@ -104,7 +104,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M();
             }
@@ -113,18 +113,67 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task NonPublicVisibilityInSignatureRejected()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                public int M();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                private int A();
+                internal int B();
+                private protected int D();
+                public int M();
+            }
+            """;
+        // private, a bare internal, and private protected name non-public members, which the .cssig
+        // grammar cannot express.
+        var diagnostics = await RunAsync(source, sig);
+        Assert.Equal(3, diagnostics.Count(d => d.Id == "CSSIG004"));
+    }
+
+    [Fact]
+    public async Task ProtectedVisibilitiesInSignatureAllowed()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                protected int A();
+                protected internal int B();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                protected int A();
+                protected internal int B();
+            }
+            """;
+        // protected and protected internal are part of the extensible surface and are allowed.
+        Assert.DoesNotContain(await RunAsync(source, sig), d => d.Id == "CSSIG004");
+    }
+
+    [Fact]
     public async Task ChangedReturnTypeReportsMismatch()
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string M();
             }
@@ -141,14 +190,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M();
             }
@@ -167,7 +216,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int Extra() => 1;
@@ -211,13 +260,13 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
             }
             """;
         var sig = """
             namespace N
-            public class C {
+            public class C() {
             """;
         var diagnostics = await RunAsync(source, sig);
         Assert.Contains(diagnostics, d => d.Id == "CSSIG003");
@@ -228,7 +277,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
@@ -249,7 +298,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int P { get; }
@@ -257,7 +306,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int P { get { return 0; } }
@@ -273,7 +322,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int F;
@@ -281,7 +330,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public async int M();
                 public volatile int F;
@@ -299,7 +348,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public abstract class C
+            public abstract class C()
             {
                 public virtual int M() => 0;
                 public abstract int N();
@@ -307,7 +356,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public abstract class C
+            public abstract class C()
             {
                 public virtual int M();
                 public abstract int N();
@@ -323,14 +372,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public virtual int M();
             }
@@ -347,14 +396,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(string s) => s.Length;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(string name);
             }
@@ -373,14 +422,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(ref readonly int x) => x;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(in int x);
             }
@@ -400,14 +449,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public const int X = 1;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public const int X = 2;
             }
@@ -428,14 +477,14 @@ public class CsSigTests
         // without it, since 'unsafe' has no signature impact and is rejected in .cssig.
         var source = """
             namespace N;
-            public unsafe class C
+            public unsafe class C()
             {
                 public delegate*<int, void> F;
             }
             """;
         var match = """
             namespace N;
-            public class C
+            public class C()
             {
                 public delegate*<int, void> F;
             }
@@ -447,7 +496,7 @@ public class CsSigTests
         // structurally, not by a string blob.
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public delegate*<long, void> F;
             }
@@ -462,7 +511,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public unsafe class C
+            public unsafe class C()
             {
                 public delegate*<int, void> F;
             }
@@ -471,7 +520,7 @@ public class CsSigTests
         // the equivalent declaration in real C#.
         var sig = """
             namespace N;
-            public unsafe class C
+            public unsafe class C()
             {
                 public delegate*<int, void> F;
             }
@@ -485,14 +534,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public static int X;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public static int X = 5;
             }
@@ -510,7 +559,7 @@ public class CsSigTests
         await AssertRoundTripsAsync("""
             namespace N
             {
-                public abstract class C<T>
+                public abstract class C()<T>
                 {
                     public const int K = 5;
                     public static readonly string S;
@@ -671,13 +720,407 @@ public class CsSigTests
         await AssertRoundTripsAsync("""
             namespace N
             {
-                public unsafe class C
+                public unsafe class C()
                 {
                     public static volatile int Flag;
                     public delegate*<int, void> Callback;
                 }
             }
             """);
+    }
+
+    [Fact]
+    public async Task RoundTripDefaultInterfaceMethods()
+    {
+        // A default interface method (one with a body) is `virtual`, whereas the body-less form
+        // written to a .cssig is `abstract`. The two must compare equal: a signature file cannot
+        // carry a body, so it cannot distinguish the two.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public interface IThing
+                {
+                    int Required(string s);
+                    int Defaulted() => 0;
+                    string Name { get; }
+                    string DefaultedName => "x";
+                    static abstract int StaticRequired();
+                    static virtual int StaticDefaulted() => 1;
+                }
+            }
+            """, languageVersion: LanguageVersion.Preview);
+    }
+
+    [Fact]
+    public async Task RoundTripPrivateConstructorClass()
+    {
+        // A class whose only constructor is private exposes no public constructor. The writer emits
+        // no constructor for it, and the analyzer ignores the parameterless constructor the compiler
+        // synthesizes when the body-less `.cssig` is parsed, so the two sides still agree -- without
+        // any private members appearing in the signature.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public sealed class Singleton
+                {
+                    public static Singleton Instance { get; }
+                    private Singleton() { }
+                }
+
+                public sealed class OnlyParam
+                {
+                    public OnlyParam(int x) { }
+                }
+
+                public class WithProtected
+                {
+                    protected WithProtected() { }
+                }
+
+                public class PublicImplicit
+                {
+                    public int Value;
+                }
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task RoundTripPositionalRecords()
+    {
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public abstract record Base
+                {
+                    public sealed record Num(double Value) : Base;
+                    public sealed record Pair(int A, string B) : Base;
+                    public sealed record Empty : Base;
+                }
+
+                public record struct PointR(int X, int Y);
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task RoundTripGenericConstraints()
+    {
+        // Constraints change member semantics: `where T : struct` makes `T?` a Nullable<T> rather
+        // than an annotated reference, and two overloads differing only by constraint are distinct.
+        // The self-referential `Box<T, TProvider>` field exercises oblivious-vs-not-annotated type
+        // parameter nullability that the writer must reconcile.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public interface IProvider<T> { }
+
+                public sealed class Box<T, TProvider>
+                    where T : struct
+                    where TProvider : IProvider<T>
+                {
+                    public class Inner
+                    {
+                        public static readonly Box<T, TProvider>.Inner Instance = null!;
+                    }
+
+                    public T? Wrap(T value) => value;
+                }
+
+                public static class Ext
+                {
+                    public static void M<T, TProvider>(T? value)
+                        where T : struct
+                        where TProvider : IProvider<T> { }
+
+                    public static void M<T, TProvider>(T? value)
+                        where T : class
+                        where TProvider : IProvider<T> { }
+                }
+            }
+            """, nullable: true);
+    }
+
+    [Fact]
+    public async Task WritesPositionalRecordParameterListAndBase()
+    {
+        var generated = await WriteAsync("""
+            namespace N
+            {
+                public abstract record Base
+                {
+                    public sealed record Num(double Value) : Base;
+                    public sealed record Empty : Base;
+                }
+            }
+            """);
+
+        // The primary constructor parameter list and the record base clause are emitted in the
+        // header.
+        Assert.Contains("public sealed record Num(double Value) : N.Base", generated);
+        Assert.Contains("public sealed record Empty() : N.Base", generated);
+
+        // The positional property and the primary constructor are carried by the header, so they
+        // must not be written as separate members.
+        Assert.DoesNotContain("public double Value", generated);
+        Assert.DoesNotContain("public Num(", generated);
+    }
+
+    [Fact]
+    public async Task WritesGenericConstraintClauses()
+    {
+        var generated = await WriteAsync("""
+            namespace N
+            {
+                public interface IFace { }
+
+                public class Constraints<TStruct, TClass, TClassQ, TNotNull, TUnmanaged, TNew, TBase, TMulti>
+                    where TStruct : struct
+                    where TClass : class
+                    where TClassQ : class?
+                    where TNotNull : notnull
+                    where TUnmanaged : unmanaged
+                    where TNew : new()
+                    where TBase : System.Exception
+                    where TMulti : class, System.IComparable, new()
+                {
+                }
+
+                public static class Methods
+                {
+                    public static void M<T>(T x) where T : struct { }
+                }
+            }
+            """, nullable: true);
+
+        Assert.Contains("where TStruct : struct", generated);
+        Assert.Contains("where TClass : class", generated);
+        Assert.Contains("where TClassQ : class?", generated);
+        Assert.Contains("where TNotNull : notnull", generated);
+        Assert.Contains("where TUnmanaged : unmanaged", generated);
+        Assert.Contains("where TNew : new()", generated);
+        Assert.Contains("where TBase : System.Exception", generated);
+        Assert.Contains("where TMulti : class, System.IComparable, new()", generated);
+        // Method-level constraints are carried too.
+        Assert.Contains("where T : struct", generated);
+    }
+
+    [Fact]
+    public async Task WritesAccessibleParameterlessConstructorExplicitly()
+    {
+        var generated = await WriteAsync("""
+            namespace N
+            {
+                public class PublicImplicit
+                {
+                    public int Value;
+                }
+
+                public abstract class WithProtected
+                {
+                    public int Value;
+                }
+
+                public sealed class Singleton
+                {
+                    public static Singleton Instance { get; }
+                    private Singleton() { }
+                }
+            }
+            """);
+
+        // An accessible implicit parameterless constructor is real API the project could remove or
+        // make private, so it is declared explicitly via primary-constructor syntax (a `()` after
+        // the type name) rather than a separate member line.
+        Assert.Contains("public class PublicImplicit()", generated);
+        Assert.Contains("public abstract class WithProtected()", generated);
+
+        // A class whose only constructor is inaccessible declares no `()`, so no constructor -- and
+        // in particular no private member -- is written.
+        Assert.Contains("public sealed class Singleton\n", generated.Replace("\r\n", "\n"));
+        Assert.DoesNotContain("private", generated);
+    }
+
+    [Fact]
+    public async Task WritesStaticModifierOnInterfaceMembers()
+    {
+        var generated = await WriteAsync("""
+            namespace N
+            {
+                public interface IThing
+                {
+                    static int StaticOnly() => 2;
+                    int Instance();
+                }
+            }
+            """, languageVersion: LanguageVersion.Preview);
+
+        // SymbolDisplay strips `static` on interface members; the writer puts it back.
+        Assert.Contains("static int StaticOnly();", generated);
+        // Instance members are not given a spurious `static`.
+        Assert.Contains("int Instance();", generated);
+        Assert.DoesNotContain("static int Instance();", generated);
+    }
+
+    [Fact]
+    public async Task RoundTripConstraintKinds()
+    {
+        // Exercises every constraint clause the writer can emit, on both types and methods.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public interface IFace { }
+
+                public class TStruct<T> where T : struct { }
+                public class TClass<T> where T : class { }
+                public class TClassQ<T> where T : class? { }
+                public class TNotNull<T> where T : notnull { }
+                public class TUnmanaged<T> where T : unmanaged { }
+                public class TNew<T> where T : new() { }
+                public class TBase<T> where T : System.Exception { }
+                public class TMulti<T> where T : class, System.IComparable, IFace, new() { }
+                public class TInterdependent<T, U> where U : T { }
+
+                public static class Methods
+                {
+                    public static void A<T>(T x) where T : struct { }
+                    public static void B<T>(T x) where T : class, new() { }
+                }
+            }
+            """, nullable: true);
+    }
+
+    [Fact]
+    public async Task RoundTripGenericPositionalRecords()
+    {
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public abstract record Base<T>
+                {
+                    public sealed record Leaf(T Value) : Base<T>;
+                }
+
+                public record Box<T>(T Value);
+                public record Pair<K, V>(K Key, V Value) where K : notnull;
+            }
+            """, nullable: true);
+    }
+
+    [Fact]
+    public async Task RoundTripRecordWithExplicitAndExtraMembers()
+    {
+        // A positional record that also declares an explicitly-overriding positional property, an
+        // additional (non-primary) constructor, and ordinary members. The explicit property and the
+        // extra constructor must still be written; the primary constructor and the implicit
+        // positional property must not be double-counted.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public sealed record Person(string Name, int Age)
+                {
+                    public string Name { get; init; } = Name;
+
+                    public Person(string name) : this(name, 0) { }
+
+                    public string Greeting() => "hi";
+                    public static Person Anonymous { get; } = new("?");
+                }
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task RoundTripAbstractRecordWithPrivateConstructor()
+    {
+        // The serde JsonValue shape: an abstract record with an explicit private parameterless
+        // constructor and derived records. The compiler synthesizes a (protected) parameterless
+        // constructor from the body-less form, but the analyzer ignores that synthesized constructor
+        // on the declaration side, so the two sides agree with no private member in the signature.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public abstract record Value
+                {
+                    private Value() { }
+
+                    public sealed record Num(double Number) : Value;
+                    public sealed record Text(string Content) : Value;
+                }
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task DeclaredPublicConstructorRemovedFromProjectReported()
+    {
+        // The accessible parameterless constructor is part of the tracked contract: if the .cssig
+        // declares it (via primary-constructor syntax) but the project has made it private, the
+        // divergence is reported.
+        var source = """
+            namespace N;
+            public class C
+            {
+                private C() { }
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+            }
+            """;
+        var diagnostic = Assert.Single(await RunAsync(source, sig));
+        Assert.Equal("CSSIG001", diagnostic.Id);
+    }
+
+    [Fact]
+    public async Task InterfaceMemberStaticnessStillReported()
+    {
+        // FlagsFrom normalizes virtuality away for interface members but keeps static-ness, so a
+        // static-vs-instance mismatch must still be reported.
+        var source = """
+            namespace N;
+            public interface IThing
+            {
+                static abstract int M();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public interface IThing
+            {
+                int M();
+            }
+            """;
+        var diagnostic = Assert.Single(await RunPreviewAsync(source, sig));
+        Assert.Equal("CSSIG005", diagnostic.Id);
+    }
+
+    [Fact]
+    public async Task NullableTypeParameterDifferenceStillReported()
+    {
+        // The oblivious-to-not-annotated collapse must not mask a genuine `T?` vs `T` difference on
+        // a class-constrained type parameter (annotated stays annotated).
+        var source = """
+            #nullable enable
+            namespace N;
+            public class C()
+            {
+                public T M<T>(T? value) where T : class => value!;
+            }
+            """;
+        var sig = """
+            #nullable enable
+            namespace N;
+            public class C()
+            {
+                public T M<T>(T value) where T : class;
+            }
+            """;
+        var diagnostic = Assert.Single(await RunNullableAsync(source, sig));
+        Assert.Equal("CSSIG005", diagnostic.Id);
+        Assert.Contains("breaks source equivalence", diagnostic.GetMessage());
     }
 
     /// <summary>Generates a <c>.cssig</c> from <paramref name="source"/> and asserts that feeding it
@@ -701,6 +1144,27 @@ public class CsSigTests
         var generated = CsSigWriter.Write(compilation);
         var diagnostics = await RunCoreAsync(source, equivalence: null, nullable, languageVersion, generated);
         Assert.Empty(diagnostics);
+    }
+
+    /// <summary>Compiles <paramref name="source"/> and returns the generated <c>.cssig</c> text, for
+    /// tests that assert on the exact emitted syntax.</summary>
+    private static async Task<string> WriteAsync(
+        string source, bool nullable = false, LanguageVersion languageVersion = LanguageVersion.Default)
+    {
+        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
+        var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
+        if (nullable)
+        {
+            compilationOptions = compilationOptions.WithNullableContextOptions(NullableContextOptions.Enable);
+        }
+
+        var compilation = CSharpCompilation.Create(
+            "TestProject",
+            new[] { CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion), path: "Test.cs") },
+            references,
+            compilationOptions);
+
+        return CsSigWriter.Write(compilation);
     }
 
     [Fact]
@@ -733,14 +1197,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string? M() => null;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string M();
             }
@@ -757,14 +1221,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public void M(string? s) { }
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public void M(string s);
             }
@@ -779,14 +1243,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string? F;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string F;
             }
@@ -802,7 +1266,7 @@ public class CsSigTests
         var source = """
             using System.Collections.Generic;
             namespace N;
-            public class C
+            public class C()
             {
                 public List<string?> M() => new();
             }
@@ -810,7 +1274,7 @@ public class CsSigTests
         var sig = """
             using System.Collections.Generic;
             namespace N;
-            public class C
+            public class C()
             {
                 public List<string> M();
             }
@@ -826,14 +1290,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string? M() => null;
             }
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string M();
             }
@@ -849,7 +1313,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string? M(string? s) => s;
                 public string N(string s) => s;
@@ -857,7 +1321,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public string? M(string? s);
                 public string N(string s);
@@ -874,7 +1338,7 @@ public class CsSigTests
             """
             using System.Collections.Generic;
             namespace N;
-            public class C
+            public class C()
             {
                 public string? Field;
                 public string? Property { get; set; }
@@ -889,7 +1353,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
                 public int Extra() => 1;
@@ -897,7 +1361,7 @@ public class CsSigTests
             """;
         var sig = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M();
             }
@@ -920,7 +1384,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M(string s) => s.Length;
                 public string Name { get; set; } = "";
@@ -948,7 +1412,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
@@ -969,14 +1433,14 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
             """;
         var cFile = """
             namespace N;
-            public class C
+            public class C()
             {
             }
             """;
@@ -999,7 +1463,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }
@@ -1023,7 +1487,7 @@ public class CsSigTests
     {
         var source = """
             namespace N;
-            public class C
+            public class C()
             {
                 public int M() => 0;
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using StaticCs;
 
 namespace CsSig;
@@ -26,7 +27,8 @@ public static class CsSigWriter
     private static readonly SymbolDisplayFormat s_memberFormat = new(
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-        genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
+        genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters
+            | SymbolDisplayGenericsOptions.IncludeTypeConstraints,
         memberOptions: SymbolDisplayMemberOptions.IncludeParameters
             | SymbolDisplayMemberOptions.IncludeType
             | SymbolDisplayMemberOptions.IncludeModifiers
@@ -245,6 +247,18 @@ public static class CsSigWriter
             .Replace("volatile ", string.Empty)
             .Replace("required ", string.Empty);
 
+        // Roslyn's SymbolDisplay suppresses every modifier (including `static`) on interface
+        // members, treating them all as implicit. `static` is observable and representable, so put
+        // it back; the remaining virtuality modifiers are intentionally not tracked for interface
+        // members (a body-less signature cannot express default implementations — see FlagsFrom).
+        if (
+            member is { IsStatic: true, ContainingType.TypeKind: TypeKind.Interface }
+            && !text.StartsWith("static ", StringComparison.Ordinal)
+        )
+        {
+            text = "static " + text;
+        }
+
         // ShowReadWriteDescriptor already renders the `{ get; set; }` body for properties/indexers,
         // so only non-property members need a terminating semicolon.
         return member is IPropertySymbol ? text : text + ";";
@@ -282,8 +296,93 @@ public static class CsSigWriter
             }
         );
 
-        parts.Add(type.Name + TypeParameterList(type));
-        return string.Join(" ", parts);
+        var name = type.Name + TypeParameterList(type);
+
+        // A positional record's parameter list drives its synthesized members (the positional
+        // properties, Deconstruct, copy constructor). Emit it so the .cssig compilation synthesizes
+        // the same members; the parameters and those members are therefore not written individually.
+        if (PrimaryConstructor(type) is { } primary)
+        {
+            name += "(" + FormatParameters(primary.Parameters) + ")";
+        }
+        // An accessible implicit parameterless constructor is real public API the project could
+        // remove or make private, so it is declared explicitly via primary-constructor syntax (a
+        // bare `()` after the type name) rather than left to synthesis. The analyzer ignores
+        // synthesized parameterless constructors on the declaration side, so a class with only an
+        // inaccessible constructor declares no `()` and no private member appears in the signature.
+        else if (ImplicitParameterlessConstructor(type) is not null)
+        {
+            name += "()";
+        }
+
+        parts.Add(name);
+        var header = string.Join(" ", parts);
+
+        // A record's base record changes the signatures of its synthesized members (Equals, Clone,
+        // PrintMembers become `override`/`sealed` and key off the base type), so it must be carried
+        // through. Base types are otherwise not part of the tracked surface and are omitted.
+        if (
+            type.IsRecord
+            && type.BaseType is { SpecialType: not SpecialType.System_Object } baseType
+        )
+        {
+            header += " : " + baseType.ToDisplayString(s_typeFormat);
+        }
+
+        header += ConstraintClauses(type.TypeParameters);
+
+        return header;
+    }
+
+    /// <summary>Renders the <c>where</c> constraint clauses for a generic type's parameters. These
+    /// must be carried because they change member semantics (most importantly, <c>where T : struct</c>
+    /// makes <c>T?</c> a <see cref="System.Nullable{T}"/> rather than an annotated reference type).</summary>
+    private static string ConstraintClauses(IEnumerable<ITypeParameterSymbol> typeParameters)
+    {
+        var clauses = new List<string>();
+        foreach (var typeParameter in typeParameters)
+        {
+            var constraints = new List<string>();
+
+            if (typeParameter.HasUnmanagedTypeConstraint)
+            {
+                constraints.Add("unmanaged");
+            }
+            else if (typeParameter.HasValueTypeConstraint)
+            {
+                constraints.Add("struct");
+            }
+            else if (typeParameter.HasReferenceTypeConstraint)
+            {
+                constraints.Add(
+                    typeParameter.ReferenceTypeConstraintNullableAnnotation
+                    == NullableAnnotation.Annotated
+                        ? "class?"
+                        : "class"
+                );
+            }
+            else if (typeParameter.HasNotNullConstraint)
+            {
+                constraints.Add("notnull");
+            }
+
+            foreach (var constraintType in typeParameter.ConstraintTypes)
+            {
+                constraints.Add(constraintType.ToDisplayString(s_typeFormat));
+            }
+
+            if (typeParameter.HasConstructorConstraint)
+            {
+                constraints.Add("new()");
+            }
+
+            if (constraints.Count > 0)
+            {
+                clauses.Add($"where {typeParameter.Name} : {string.Join(", ", constraints)}");
+            }
+        }
+
+        return clauses.Count == 0 ? "" : " " + string.Join(" ", clauses);
     }
 
     private static string DelegateDeclaration(INamedTypeSymbol type)
@@ -325,9 +424,23 @@ public static class CsSigWriter
     /// their property/event) so the set matches what <see cref="ApiSurface"/> compares.</summary>
     private static IEnumerable<ISymbol> VisibleMembers(INamedTypeSymbol type)
     {
+        var primaryConstructor = PrimaryConstructor(type);
+
         foreach (var member in type.GetMembers())
         {
             if (member is INamedTypeSymbol || member.IsImplicitlyDeclared)
+            {
+                continue;
+            }
+
+            // The primary constructor and the properties synthesized from its parameters are
+            // emitted as part of the record header (see TypeHeader), not as individual members.
+            if (SymbolEqualityComparer.Default.Equals(member, primaryConstructor))
+            {
+                continue;
+            }
+
+            if (member is IPropertySymbol property && IsPositionalProperty(property))
             {
                 continue;
             }
@@ -352,6 +465,31 @@ public static class CsSigWriter
         }
     }
 
+    /// <summary>The primary constructor of a record (or primary-constructor type), identified by its
+    /// declaring syntax being the type declaration's parameter list; <c>null</c> when there is
+    /// none.</summary>
+    private static IMethodSymbol? PrimaryConstructor(INamedTypeSymbol type)
+    {
+        foreach (var constructor in type.InstanceConstructors)
+        {
+            foreach (var reference in constructor.DeclaringSyntaxReferences)
+            {
+                if (reference.GetSyntax() is TypeDeclarationSyntax { ParameterList: not null })
+                {
+                    return constructor;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether a property was synthesized from a positional record parameter (rather than
+    /// explicitly declared), in which case it is carried by the record's parameter list.</summary>
+    private static bool IsPositionalProperty(IPropertySymbol property) =>
+        property.DeclaringSyntaxReferences.Any(static r => r.GetSyntax() is ParameterSyntax);
+
+
     private static bool IsVisible(ISymbol member) =>
         member switch
         {
@@ -361,6 +499,26 @@ public static class CsSigWriter
             ) || (property.SetMethod is { } setter && ApiSurface.IsTrackedApi(setter)),
             _ => ApiSurface.IsTrackedApi(member),
         };
+
+    /// <summary>The implicitly synthesized parameterless constructor of a class that is part of the
+    /// public surface (accessible), or <c>null</c> when the type has none or it is inaccessible.
+    /// Structs are excluded: their parameterless constructor is always public on both sides, so it
+    /// need not be written. This is the one implicit member whose presence and accessibility can vary
+    /// independently of the declaration, so it is emitted explicitly rather than left to synthesis.</summary>
+    private static IMethodSymbol? ImplicitParameterlessConstructor(INamedTypeSymbol type)
+    {
+        if (type.TypeKind != TypeKind.Class)
+        {
+            return null;
+        }
+
+        var constructor = type.InstanceConstructors.FirstOrDefault(static c =>
+            c.IsImplicitlyDeclared && c.Parameters.IsEmpty
+        );
+
+        return constructor is not null && IsVisible(constructor) ? constructor : null;
+    }
+
 
     private static IEnumerable<INamedTypeSymbol> TopLevelTypes(INamespaceSymbol root)
     {

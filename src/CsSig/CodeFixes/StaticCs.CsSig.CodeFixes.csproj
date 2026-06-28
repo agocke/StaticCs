@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AssemblyName>StaticCs.CsSig.CodeFixes</AssemblyName>
@@ -14,7 +14,7 @@
   -->
   <PropertyGroup>
     <PackageId>StaticCS.CsSig</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>agocke</Authors>
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>

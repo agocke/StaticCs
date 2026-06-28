@@ -44,7 +44,11 @@ internal static class ApiSurface
     /// Builds a map from the structural signature of every externally visible member declared in
     /// <paramref name="assembly"/> to its source location and a human-readable display string.
     /// </summary>
-    public static Dictionary<MemberIdentity, ApiEntry> Collect(IAssemblySymbol assembly)
+    /// <param name="isDeclaration">Whether <paramref name="assembly"/> is the parsed <c>.cssig</c>
+    /// declaration rather than the real project. On the declaration side an implicitly synthesized
+    /// parameterless constructor is a body-less artifact of the signature file (the writer emits
+    /// accessible parameterless constructors explicitly), not a real declaration, so it is ignored.</param>
+    public static Dictionary<MemberIdentity, ApiEntry> Collect(IAssemblySymbol assembly, bool isDeclaration)
     {
         var map = new Dictionary<MemberIdentity, ApiEntry>();
 
@@ -57,7 +61,7 @@ internal static class ApiSurface
 
             Add(type);
 
-            AddApiMembers(type, Add);
+            AddApiMembers(type, Add, isDeclaration);
         }
 
         return map;
@@ -87,7 +91,7 @@ internal static class ApiSurface
 
     /// <summary>Yields the tracked members of <paramref name="type"/>, including implicit
     /// constructors and implicit record members, mirroring the Public API analyzer.</summary>
-    private static void AddApiMembers(INamedTypeSymbol type, Action<ISymbol> add)
+    private static void AddApiMembers(INamedTypeSymbol type, Action<ISymbol> add, bool isDeclaration)
     {
         foreach (var member in type.GetMembers())
         {
@@ -108,7 +112,10 @@ internal static class ApiSurface
             }
         }
 
-        // Implicitly declared (parameterless) constructor.
+        // Implicitly declared (parameterless) constructor. On the declaration side this is a
+        // body-less artifact of the .cssig (the writer emits accessible parameterless constructors
+        // explicitly), so it is not tracked there; a class with no accessible parameterless
+        // constructor declares none and the synthesized one must be ignored.
         IMethodSymbol? implicitConstructor = null;
         if (
             type
@@ -119,7 +126,11 @@ internal static class ApiSurface
             implicitConstructor = type.InstanceConstructors.FirstOrDefault(static c =>
                 c.IsImplicitlyDeclared
             );
-            if (implicitConstructor is not null && IsTrackedApi(implicitConstructor))
+            if (
+                implicitConstructor is not null
+                && !SkipSynthesizedConstructor(implicitConstructor, isDeclaration)
+                && IsTrackedApi(implicitConstructor)
+            )
             {
                 add(implicitConstructor);
             }
@@ -145,6 +156,15 @@ internal static class ApiSurface
                 continue;
             }
 
+            // The protected parameterless constructor synthesized for an abstract record (whose only
+            // declared constructor is, say, private) reaches this loop because it is not the single
+            // implicit constructor handled above. On the declaration side it is likewise a body-less
+            // artifact and must be ignored.
+            if (SkipSynthesizedConstructor(member, isDeclaration))
+            {
+                continue;
+            }
+
             if (
                 member is IMethodSymbol { IsImplicitlyDeclared: true } method
                 && IsTrackedApi(method)
@@ -163,6 +183,19 @@ internal static class ApiSurface
             }
         }
     }
+
+    /// <summary>Whether a member is the implicitly synthesized parameterless constructor of a class
+    /// (including a record class) that should be ignored on the declaration side. Structs always
+    /// expose a public parameterless constructor on both sides, so they are unaffected.</summary>
+    private static bool SkipSynthesizedConstructor(ISymbol member, bool isDeclaration) =>
+        isDeclaration
+        && member is IMethodSymbol
+        {
+            MethodKind: MethodKind.Constructor,
+            IsImplicitlyDeclared: true,
+            Parameters.IsEmpty: true,
+            ContainingType.TypeKind: TypeKind.Class,
+        };
 
     private static List<INamedTypeSymbol> AllNamedTypes(INamespaceSymbol root)
     {

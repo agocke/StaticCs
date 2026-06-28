@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -106,12 +107,33 @@ internal static class CsSigRecognizer
         /// surface membership) or one of the <paramref name="allowed"/> modifiers known to affect
         /// the signature for this declaration kind.
         /// </summary>
-        private void CheckModifiers(SyntaxTokenList modifiers, params SyntaxKind[] allowed)
+        private void CheckModifiers(SyntaxTokenList modifiers, params ReadOnlySpan<SyntaxKind> allowed)
         {
+            var hasProtected = modifiers.Any(SyntaxKind.ProtectedKeyword);
+
             foreach (var modifier in modifiers)
             {
                 var kind = modifier.Kind();
-                if (IsAccessibility(kind) || System.Array.IndexOf(allowed, kind) >= 0)
+                if (IsAccessibility(kind))
+                {
+                    // Only public surface is expressible: public, protected, and protected internal.
+                    // 'private', a bare 'internal', and 'private protected' name non-public members
+                    // that are not part of the signature at all.
+                    if (
+                        kind == SyntaxKind.PrivateKeyword
+                        || (kind == SyntaxKind.InternalKeyword && !hasProtected)
+                    )
+                    {
+                        Report(
+                            modifier.GetLocation(),
+                            $"The '{modifier.ValueText}' modifier names a non-public member, which is not part of the signature and is not allowed in a .cssig file"
+                        );
+                    }
+
+                    continue;
+                }
+
+                if (allowed.IndexOf(kind) >= 0)
                 {
                     continue;
                 }
@@ -296,7 +318,8 @@ internal static class CsSigRecognizer
 
         public override void VisitAccessorDeclaration(AccessorDeclarationSyntax node)
         {
-            // Accessor accessibility (e.g. 'private set') determines whether the accessor surfaces.
+            // Accessor accessibility is restricted to public/protected like any member; a non-public
+            // accessor (e.g. 'private set') is not part of the signature and is rejected.
             CheckModifiers(node.Modifiers);
             RejectBody(node.Body, node.ExpressionBody);
             base.VisitAccessorDeclaration(node);
