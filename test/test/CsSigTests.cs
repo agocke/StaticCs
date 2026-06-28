@@ -556,7 +556,8 @@ public class CsSigTests
     [Fact]
     public async Task RoundTripClassMembers()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public abstract class C()<T>
@@ -572,13 +573,15 @@ public class CsSigTests
                     public event System.Action E;
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
     public async Task RoundTripStructInterfaceEnumDelegate()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public interface IThing
@@ -603,13 +606,15 @@ public class CsSigTests
 
                 public delegate int Transform<T>(T input, ref int state);
             }
-            """);
+            """
+        );
     }
 
     [Fact]
     public async Task RoundTripNestedTypesAndStaticClass()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N.Inner
             {
                 public static class Helpers
@@ -622,7 +627,8 @@ public class CsSigTests
                     }
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
@@ -631,7 +637,8 @@ public class CsSigTests
         // C# 14 extension blocks: each `extension(Receiver) { ... }` is modelled by Roslyn as a
         // nested type with an unspeakable name. The writer must emit it as an `extension(...)` block
         // (not a nameless `class`), and the round-trip must produce no diagnostics.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public static class Ext
@@ -648,7 +655,10 @@ public class CsSigTests
                     }
                 }
             }
-            """, nullable: true, languageVersion: LanguageVersion.Preview);
+            """,
+            nullable: true,
+            languageVersion: LanguageVersion.Preview
+        );
     }
 
     [Fact]
@@ -717,7 +727,8 @@ public class CsSigTests
     [Fact]
     public async Task RoundTripFunctionPointerAndVolatile()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public unsafe class C()
@@ -726,7 +737,8 @@ public class CsSigTests
                     public delegate*<int, void> Callback;
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
@@ -735,7 +747,8 @@ public class CsSigTests
         // A default interface method (one with a body) is `virtual`, whereas the body-less form
         // written to a .cssig is `abstract`. The two must compare equal: a signature file cannot
         // carry a body, so it cannot distinguish the two.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public interface IThing
@@ -748,7 +761,9 @@ public class CsSigTests
                     static virtual int StaticDefaulted() => 1;
                 }
             }
-            """, languageVersion: LanguageVersion.Preview);
+            """,
+            languageVersion: LanguageVersion.Preview
+        );
     }
 
     [Fact]
@@ -758,7 +773,8 @@ public class CsSigTests
         // no constructor for it, and the analyzer ignores the parameterless constructor the compiler
         // synthesizes when the body-less `.cssig` is parsed, so the two sides still agree -- without
         // any private members appearing in the signature.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public sealed class Singleton
@@ -782,13 +798,15 @@ public class CsSigTests
                     public int Value;
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
     public async Task RoundTripPositionalRecords()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public abstract record Base
@@ -800,7 +818,8 @@ public class CsSigTests
 
                 public record struct PointR(int X, int Y);
             }
-            """);
+            """
+        );
     }
 
     [Fact]
@@ -810,7 +829,8 @@ public class CsSigTests
         // than an annotated reference, and two overloads differing only by constraint are distinct.
         // The self-referential `Box<T, TProvider>` field exercises oblivious-vs-not-annotated type
         // parameter nullability that the writer must reconcile.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public interface IProvider<T> { }
@@ -838,13 +858,16 @@ public class CsSigTests
                         where TProvider : IProvider<T> { }
                 }
             }
-            """, nullable: true);
+            """,
+            nullable: true
+        );
     }
 
     [Fact]
     public async Task WritesPositionalRecordParameterListAndBase()
     {
-        var generated = await WriteAsync("""
+        var generated = await WriteAsync(
+            """
             namespace N
             {
                 public abstract record Base
@@ -853,7 +876,8 @@ public class CsSigTests
                     public sealed record Empty : Base;
                 }
             }
-            """);
+            """
+        );
 
         // The primary constructor parameter list and the record base clause are emitted in the
         // header.
@@ -869,7 +893,8 @@ public class CsSigTests
     [Fact]
     public async Task WritesGenericConstraintClauses()
     {
-        var generated = await WriteAsync("""
+        var generated = await WriteAsync(
+            """
             namespace N
             {
                 public interface IFace { }
@@ -891,7 +916,9 @@ public class CsSigTests
                     public static void M<T>(T x) where T : struct { }
                 }
             }
-            """, nullable: true);
+            """,
+            nullable: true
+        );
 
         Assert.Contains("where TStruct : struct", generated);
         Assert.Contains("where TClass : class", generated);
@@ -908,7 +935,8 @@ public class CsSigTests
     [Fact]
     public async Task WritesAccessibleParameterlessConstructorExplicitly()
     {
-        var generated = await WriteAsync("""
+        var generated = await WriteAsync(
+            """
             namespace N
             {
                 public class PublicImplicit
@@ -927,7 +955,8 @@ public class CsSigTests
                     private Singleton() { }
                 }
             }
-            """);
+            """
+        );
 
         // An accessible implicit parameterless constructor is real API the project could remove or
         // make private, so it is declared explicitly via primary-constructor syntax (a `()` after
@@ -944,7 +973,8 @@ public class CsSigTests
     [Fact]
     public async Task WritesStaticModifierOnInterfaceMembers()
     {
-        var generated = await WriteAsync("""
+        var generated = await WriteAsync(
+            """
             namespace N
             {
                 public interface IThing
@@ -953,7 +983,9 @@ public class CsSigTests
                     int Instance();
                 }
             }
-            """, languageVersion: LanguageVersion.Preview);
+            """,
+            languageVersion: LanguageVersion.Preview
+        );
 
         // SymbolDisplay strips `static` on interface members; the writer puts it back.
         Assert.Contains("static int StaticOnly();", generated);
@@ -966,7 +998,8 @@ public class CsSigTests
     public async Task RoundTripConstraintKinds()
     {
         // Exercises every constraint clause the writer can emit, on both types and methods.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public interface IFace { }
@@ -987,13 +1020,16 @@ public class CsSigTests
                     public static void B<T>(T x) where T : class, new() { }
                 }
             }
-            """, nullable: true);
+            """,
+            nullable: true
+        );
     }
 
     [Fact]
     public async Task RoundTripGenericPositionalRecords()
     {
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public abstract record Base<T>
@@ -1004,7 +1040,9 @@ public class CsSigTests
                 public record Box<T>(T Value);
                 public record Pair<K, V>(K Key, V Value) where K : notnull;
             }
-            """, nullable: true);
+            """,
+            nullable: true
+        );
     }
 
     [Fact]
@@ -1014,7 +1052,8 @@ public class CsSigTests
         // additional (non-primary) constructor, and ordinary members. The explicit property and the
         // extra constructor must still be written; the primary constructor and the implicit
         // positional property must not be double-counted.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public sealed record Person(string Name, int Age)
@@ -1027,7 +1066,8 @@ public class CsSigTests
                     public static Person Anonymous { get; } = new("?");
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
@@ -1037,7 +1077,8 @@ public class CsSigTests
         // constructor and derived records. The compiler synthesizes a (protected) parameterless
         // constructor from the body-less form, but the analyzer ignores that synthesized constructor
         // on the declaration side, so the two sides agree with no private member in the signature.
-        await AssertRoundTripsAsync("""
+        await AssertRoundTripsAsync(
+            """
             namespace N
             {
                 public abstract record Value
@@ -1048,7 +1089,8 @@ public class CsSigTests
                     public sealed record Text(string Content) : Value;
                 }
             }
-            """);
+            """
+        );
     }
 
     [Fact]
@@ -1126,43 +1168,87 @@ public class CsSigTests
     /// <summary>Generates a <c>.cssig</c> from <paramref name="source"/> and asserts that feeding it
     /// back through the analyzer reports no diagnostics.</summary>
     private static async Task AssertRoundTripsAsync(
-        string source, bool nullable = false, LanguageVersion languageVersion = LanguageVersion.Default)
+        string source,
+        bool nullable = false,
+        LanguageVersion languageVersion = LanguageVersion.Default
+    )
     {
-        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
-        var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
+        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(
+            LanguageNames.CSharp,
+            CancellationToken.None
+        );
+        var compilationOptions = new CSharpCompilationOptions(
+            OutputKind.DynamicallyLinkedLibrary,
+            allowUnsafe: true
+        );
         if (nullable)
         {
-            compilationOptions = compilationOptions.WithNullableContextOptions(NullableContextOptions.Enable);
+            compilationOptions = compilationOptions.WithNullableContextOptions(
+                NullableContextOptions.Enable
+            );
         }
 
         var compilation = CSharpCompilation.Create(
             "TestProject",
-            new[] { CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion), path: "Test.cs") },
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(
+                    source,
+                    new CSharpParseOptions(languageVersion),
+                    path: "Test.cs"
+                ),
+            },
             references,
-            compilationOptions);
+            compilationOptions
+        );
 
         var generated = CsSigWriter.Write(compilation);
-        var diagnostics = await RunCoreAsync(source, equivalence: null, nullable, languageVersion, generated);
+        var diagnostics = await RunCoreAsync(
+            source,
+            equivalence: null,
+            nullable,
+            languageVersion,
+            generated
+        );
         Assert.Empty(diagnostics);
     }
 
     /// <summary>Compiles <paramref name="source"/> and returns the generated <c>.cssig</c> text, for
     /// tests that assert on the exact emitted syntax.</summary>
     private static async Task<string> WriteAsync(
-        string source, bool nullable = false, LanguageVersion languageVersion = LanguageVersion.Default)
+        string source,
+        bool nullable = false,
+        LanguageVersion languageVersion = LanguageVersion.Default
+    )
     {
-        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
-        var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
+        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(
+            LanguageNames.CSharp,
+            CancellationToken.None
+        );
+        var compilationOptions = new CSharpCompilationOptions(
+            OutputKind.DynamicallyLinkedLibrary,
+            allowUnsafe: true
+        );
         if (nullable)
         {
-            compilationOptions = compilationOptions.WithNullableContextOptions(NullableContextOptions.Enable);
+            compilationOptions = compilationOptions.WithNullableContextOptions(
+                NullableContextOptions.Enable
+            );
         }
 
         var compilation = CSharpCompilation.Create(
             "TestProject",
-            new[] { CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion), path: "Test.cs") },
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(
+                    source,
+                    new CSharpParseOptions(languageVersion),
+                    path: "Test.cs"
+                ),
+            },
             references,
-            compilationOptions);
+            compilationOptions
+        );
 
         return CsSigWriter.Write(compilation);
     }
@@ -1345,7 +1431,8 @@ public class CsSigTests
                 public string? M(string? a, List<string?> b) => a;
             }
             """,
-            nullable: true);
+            nullable: true
+        );
     }
 
     [Fact]
@@ -1447,7 +1534,10 @@ public class CsSigTests
 
         // N.C is declared in C.cssig, so even with PublicAPI.cssig present the fix targets C.cssig.
         using var harness = await CodeFixHarness.CreateAsync(
-            source, ("PublicAPI.cssig", ""), ("C.cssig", cFile));
+            source,
+            ("PublicAPI.cssig", ""),
+            ("C.cssig", cFile)
+        );
         var actions = await harness.RegisterFirstAsync();
 
         var single = Assert.Single(actions);
@@ -1516,7 +1606,11 @@ public class CsSigTests
         public ProjectId ProjectId { get; }
         public DocumentId SourceId { get; }
 
-        private CodeFixHarness(Microsoft.CodeAnalysis.AdhocWorkspace workspace, ProjectId projectId, DocumentId sourceId)
+        private CodeFixHarness(
+            Microsoft.CodeAnalysis.AdhocWorkspace workspace,
+            ProjectId projectId,
+            DocumentId sourceId
+        )
         {
             _workspace = workspace;
             ProjectId = projectId;
@@ -1525,27 +1619,46 @@ public class CsSigTests
 
         public void Dispose() => _workspace.Dispose();
 
-        public static async Task<CodeFixHarness> CreateAsync(string source, params (string name, string content)[] sigFiles)
+        public static async Task<CodeFixHarness> CreateAsync(
+            string source,
+            params (string name, string content)[] sigFiles
+        )
         {
-            var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
+            var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(
+                LanguageNames.CSharp,
+                CancellationToken.None
+            );
 
             var projectId = ProjectId.CreateNewId();
             var sourceId = DocumentId.CreateNewId(projectId);
 
             var workspace = new Microsoft.CodeAnalysis.AdhocWorkspace();
-            var solution = workspace.CurrentSolution
-                .AddProject(projectId, "TestProject", "TestProject", LanguageNames.CSharp)
+            var solution = workspace
+                .CurrentSolution.AddProject(
+                    projectId,
+                    "TestProject",
+                    "TestProject",
+                    LanguageNames.CSharp
+                )
                 .AddMetadataReferences(projectId, references)
                 .WithProjectCompilationOptions(
                     projectId,
-                    new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true))
+                    new CSharpCompilationOptions(
+                        OutputKind.DynamicallyLinkedLibrary,
+                        allowUnsafe: true
+                    )
+                )
                 .AddDocument(sourceId, "Test.cs", source);
 
             foreach (var (name, content) in sigFiles)
             {
                 var sigId = DocumentId.CreateNewId(projectId);
                 solution = solution.AddAdditionalDocument(
-                    sigId, name, SourceText.From(content), filePath: name);
+                    sigId,
+                    name,
+                    SourceText.From(content),
+                    filePath: name
+                );
             }
 
             Assert.True(workspace.TryApplyChanges(solution));
@@ -1559,8 +1672,12 @@ public class CsSigTests
             var project = Project;
             var compilation = (await project.GetCompilationAsync(CancellationToken.None))!;
             var withAnalyzers = compilation.WithAnalyzers(
-                ImmutableArray.Create<DiagnosticAnalyzer>(new CsSigAnalyzer()), project.AnalyzerOptions);
-            var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(CancellationToken.None);
+                ImmutableArray.Create<DiagnosticAnalyzer>(new CsSigAnalyzer()),
+                project.AnalyzerOptions
+            );
+            var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(
+                CancellationToken.None
+            );
             return diagnostics.Where(d => d.Id == "CSSIG002").ToImmutableArray();
         }
 
@@ -1573,7 +1690,11 @@ public class CsSigTests
 
             var actions = ImmutableArray.CreateBuilder<CodeAction>();
             var context = new CodeFixContext(
-                Project.GetDocument(SourceId)!, trigger, (a, _) => actions.Add(a), CancellationToken.None);
+                Project.GetDocument(SourceId)!,
+                trigger,
+                (a, _) => actions.Add(a),
+                CancellationToken.None
+            );
             await new CsSigCodeFixProvider().RegisterCodeFixesAsync(context);
             return actions.ToImmutable();
         }
@@ -1591,7 +1712,8 @@ public class CsSigTests
                 equivalenceKey,
                 provider.FixableDiagnosticIds,
                 new CollectedDiagnosticProvider(diagnostics),
-                CancellationToken.None);
+                CancellationToken.None
+            );
 
             var action = await provider.GetFixAllProvider()!.GetFixAsync(fixAllContext);
             return await ApplyAsync(action!, ProjectId);
@@ -1599,7 +1721,10 @@ public class CsSigTests
 
         /// <summary>Applies a code action and returns the resulting <c>.cssig</c> documents as a
         /// name -> text map.</summary>
-        public static async Task<Dictionary<string, string>> ApplyAsync(CodeAction action, ProjectId projectId)
+        public static async Task<Dictionary<string, string>> ApplyAsync(
+            CodeAction action,
+            ProjectId projectId
+        )
         {
             var operations = await action.GetOperationsAsync(CancellationToken.None);
             var changed = operations.OfType<ApplyChangesOperation>().Single().ChangedSolution;
@@ -1617,68 +1742,129 @@ public class CsSigTests
         {
             private readonly ImmutableArray<Diagnostic> _diagnostics;
 
-            public CollectedDiagnosticProvider(ImmutableArray<Diagnostic> diagnostics) => _diagnostics = diagnostics;
+            public CollectedDiagnosticProvider(ImmutableArray<Diagnostic> diagnostics) =>
+                _diagnostics = diagnostics;
 
             public override Task<System.Collections.Generic.IEnumerable<Diagnostic>> GetAllDiagnosticsAsync(
-                Project project, CancellationToken cancellationToken)
-                => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
+                Project project,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
 
             public override Task<System.Collections.Generic.IEnumerable<Diagnostic>> GetDocumentDiagnosticsAsync(
-                Document document, CancellationToken cancellationToken)
-                => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
+                Document document,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
 
             public override Task<System.Collections.Generic.IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(
-                Project project, CancellationToken cancellationToken)
-                => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
+                Project project,
+                CancellationToken cancellationToken
+            ) => Task.FromResult<System.Collections.Generic.IEnumerable<Diagnostic>>(_diagnostics);
         }
     }
 
-    private static Task<ImmutableArray<Diagnostic>> RunAsync(string source, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence: null, nullable: false, LanguageVersion.Default, signatureFiles);
+    private static Task<ImmutableArray<Diagnostic>> RunAsync(
+        string source,
+        params string[] signatureFiles
+    ) =>
+        RunCoreAsync(
+            source,
+            equivalence: null,
+            nullable: false,
+            LanguageVersion.Default,
+            signatureFiles
+        );
 
-    private static Task<ImmutableArray<Diagnostic>> RunPreviewAsync(string source, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence: null, nullable: true, LanguageVersion.Preview, signatureFiles);
+    private static Task<ImmutableArray<Diagnostic>> RunPreviewAsync(
+        string source,
+        params string[] signatureFiles
+    ) =>
+        RunCoreAsync(
+            source,
+            equivalence: null,
+            nullable: true,
+            LanguageVersion.Preview,
+            signatureFiles
+        );
 
-    private static Task<ImmutableArray<Diagnostic>> RunNullableAsync(string source, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence: null, nullable: true, LanguageVersion.Default, signatureFiles);
+    private static Task<ImmutableArray<Diagnostic>> RunNullableAsync(
+        string source,
+        params string[] signatureFiles
+    ) =>
+        RunCoreAsync(
+            source,
+            equivalence: null,
+            nullable: true,
+            LanguageVersion.Default,
+            signatureFiles
+        );
 
     private static Task<ImmutableArray<Diagnostic>> RunWithEquivalenceAsync(
-        string source, string? equivalence, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence, nullable: false, LanguageVersion.Default, signatureFiles);
+        string source,
+        string? equivalence,
+        params string[] signatureFiles
+    ) =>
+        RunCoreAsync(source, equivalence, nullable: false, LanguageVersion.Default, signatureFiles);
 
     private static Task<ImmutableArray<Diagnostic>> RunNullableWithEquivalenceAsync(
-        string source, string? equivalence, params string[] signatureFiles)
-        => RunCoreAsync(source, equivalence, nullable: true, LanguageVersion.Default, signatureFiles);
+        string source,
+        string? equivalence,
+        params string[] signatureFiles
+    ) => RunCoreAsync(source, equivalence, nullable: true, LanguageVersion.Default, signatureFiles);
 
     private static async Task<ImmutableArray<Diagnostic>> RunCoreAsync(
-        string source, string? equivalence, bool nullable, LanguageVersion languageVersion, params string[] signatureFiles)
+        string source,
+        string? equivalence,
+        bool nullable,
+        LanguageVersion languageVersion,
+        params string[] signatureFiles
+    )
     {
-        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(LanguageNames.CSharp, CancellationToken.None);
+        var references = await ReferenceAssemblies.Net.Net60.ResolveAsync(
+            LanguageNames.CSharp,
+            CancellationToken.None
+        );
 
         var parseOptions = new CSharpParseOptions(languageVersion);
-        var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true);
+        var compilationOptions = new CSharpCompilationOptions(
+            OutputKind.DynamicallyLinkedLibrary,
+            allowUnsafe: true
+        );
         if (nullable)
         {
-            compilationOptions = compilationOptions.WithNullableContextOptions(NullableContextOptions.Enable);
+            compilationOptions = compilationOptions.WithNullableContextOptions(
+                NullableContextOptions.Enable
+            );
         }
 
         var compilation = CSharpCompilation.Create(
             "TestProject",
             new[] { CSharpSyntaxTree.ParseText(source, parseOptions, path: "Test.cs") },
             references,
-            compilationOptions);
+            compilationOptions
+        );
 
         var additionalFiles = ImmutableArray.CreateRange(
-            signatureFiles.Select((content, i) => (AdditionalText)new InMemoryAdditionalText($"Api{i}.cssig", content)));
+            signatureFiles.Select(
+                (content, i) => (AdditionalText)new InMemoryAdditionalText($"Api{i}.cssig", content)
+            )
+        );
 
         var options = equivalence is null
             ? new AnalyzerOptions(additionalFiles)
-            : new AnalyzerOptions(additionalFiles, new TestConfigOptionsProvider(
-                ImmutableDictionary<string, string>.Empty.Add("build_property.CsSigEquivalence", equivalence)));
+            : new AnalyzerOptions(
+                additionalFiles,
+                new TestConfigOptionsProvider(
+                    ImmutableDictionary<string, string>.Empty.Add(
+                        "build_property.CsSigEquivalence",
+                        equivalence
+                    )
+                )
+            );
 
         var withAnalyzers = compilation.WithAnalyzers(
             ImmutableArray.Create<DiagnosticAnalyzer>(new CsSigAnalyzer()),
-            options);
+            options
+        );
 
         var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(CancellationToken.None);
         return diagnostics.OrderBy(d => d.Id).ToImmutableArray();
@@ -1688,26 +1874,32 @@ public class CsSigTests
     {
         private readonly AnalyzerConfigOptions _global;
 
-        public TestConfigOptionsProvider(ImmutableDictionary<string, string> globals)
-            => _global = new TestConfigOptions(globals);
+        public TestConfigOptionsProvider(ImmutableDictionary<string, string> globals) =>
+            _global = new TestConfigOptions(globals);
 
         public override AnalyzerConfigOptions GlobalOptions => _global;
 
-        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => TestConfigOptions.Empty;
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) =>
+            TestConfigOptions.Empty;
 
-        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => TestConfigOptions.Empty;
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) =>
+            TestConfigOptions.Empty;
     }
 
     private sealed class TestConfigOptions : AnalyzerConfigOptions
     {
-        public static readonly TestConfigOptions Empty = new(ImmutableDictionary<string, string>.Empty);
+        public static readonly TestConfigOptions Empty = new(
+            ImmutableDictionary<string, string>.Empty
+        );
 
         private readonly ImmutableDictionary<string, string> _values;
 
         public TestConfigOptions(ImmutableDictionary<string, string> values) => _values = values;
 
         public override bool TryGetValue(
-            string key, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? value)
+            string key,
+            [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? value
+        )
         {
             if (_values.TryGetValue(key, out var v))
             {

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -26,9 +25,11 @@
     <ProjectReference Include="../../src/Collections/StaticCs.Collections.csproj" />
     <ProjectReference Include="../../src/Async/StaticCs.Async.csproj" />
     <ProjectReference Include="../../src/StaticCs/StaticCs.csproj" />
-    <ProjectReference Include="../../src/IndentingBuilder/IndentingBuilder.csproj" Aliases="IbLib" />
+    <ProjectReference
+      Include="../../src/IndentingBuilder/IndentingBuilder.csproj"
+      Aliases="IbLib"
+    />
     <ProjectReference Include="../../src/CsSig/Analyzer/StaticCs.CsSig.Analyzers.csproj" />
     <ProjectReference Include="../../src/CsSig/CodeFixes/StaticCs.CsSig.CodeFixes.csproj" />
   </ItemGroup>
-
 </Project>
