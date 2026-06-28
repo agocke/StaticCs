@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -106,7 +107,7 @@ internal static class CsSigRecognizer
         /// surface membership) or one of the <paramref name="allowed"/> modifiers known to affect
         /// the signature for this declaration kind.
         /// </summary>
-        private void CheckModifiers(SyntaxTokenList modifiers, params SyntaxKind[] allowed)
+        private void CheckModifiers(SyntaxTokenList modifiers, params ReadOnlySpan<SyntaxKind> allowed)
         {
             var hasProtected = modifiers.Any(SyntaxKind.ProtectedKeyword);
 
@@ -132,7 +133,7 @@ internal static class CsSigRecognizer
                     continue;
                 }
 
-                if (System.Array.IndexOf(allowed, kind) >= 0)
+                if (allowed.IndexOf(kind) >= 0)
                 {
                     continue;
                 }

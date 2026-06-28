@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <AssemblyName>StaticCs.CsSig.Analyzers</AssemblyName>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 
     <!-- Packaged by StaticCs.CsSig.CodeFixes.csproj, which ships this assembly alongside the code fixes. -->
     <IsPackable>false</IsPackable>
+
+    <!-- Explicitly targeting netcore for an analyzer, even though we're not supposed to, because it's simpler. -->
+    <NoWarn>$(NoWarn);RS1041</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
