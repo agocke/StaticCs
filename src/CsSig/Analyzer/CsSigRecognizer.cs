@@ -133,7 +133,16 @@ internal static class CsSigRecognizer
                     continue;
                 }
 
-                if (allowed.IndexOf(kind) >= 0)
+                var isAllowed = false;
+                foreach (var allowedKind in allowed)
+                {
+                    if (allowedKind == kind)
+                    {
+                        isAllowed = true;
+                        break;
+                    }
+                }
+                if (isAllowed)
                 {
                     continue;
                 }
