@@ -133,4 +133,4 @@ modifiers (`async`, `unsafe`, `volatile`, …) omitted.
   ignored under binary equivalence. They are only meaningful when the project compiles with nullable
   reference types enabled; otherwise every reference type is oblivious on both sides and matches.
 - Editor support (syntax highlighting) for `.cssig` files is provided by the VS Code extension under
-  [`editors/vscode/cssig`](../../editors/vscode/cssig).
+  [`src/CsSig/vscode`](../vscode).
