@@ -680,6 +680,112 @@ public class CsSigTests
             """);
     }
 
+    [Fact]
+    public async Task RoundTripDefaultInterfaceMethods()
+    {
+        // A default interface method (one with a body) is `virtual`, whereas the body-less form
+        // written to a .cssig is `abstract`. The two must compare equal: a signature file cannot
+        // carry a body, so it cannot distinguish the two.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public interface IThing
+                {
+                    int Required(string s);
+                    int Defaulted() => 0;
+                    string Name { get; }
+                    string DefaultedName => "x";
+                    static abstract int StaticRequired();
+                    static virtual int StaticDefaulted() => 1;
+                }
+            }
+            """, languageVersion: LanguageVersion.Preview);
+    }
+
+    [Fact]
+    public async Task RoundTripPrivateConstructorClass()
+    {
+        // A class whose only constructor is private exposes no public constructor. Written body-less
+        // as `public sealed class C { ... }`, the compiler would synthesize a *public* implicit
+        // constructor when the .cssig is parsed, so the writer must emit a stub to suppress it.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public sealed class Singleton
+                {
+                    public static Singleton Instance { get; }
+                    private Singleton() { }
+                }
+
+                public sealed class OnlyParam
+                {
+                    public OnlyParam(int x) { }
+                }
+
+                public class WithProtected
+                {
+                    protected WithProtected() { }
+                }
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task RoundTripPositionalRecords()
+    {
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public abstract record Base
+                {
+                    public sealed record Num(double Value) : Base;
+                    public sealed record Pair(int A, string B) : Base;
+                    public sealed record Empty : Base;
+                }
+
+                public record struct PointR(int X, int Y);
+            }
+            """);
+    }
+
+    [Fact]
+    public async Task RoundTripGenericConstraints()
+    {
+        // Constraints change member semantics: `where T : struct` makes `T?` a Nullable<T> rather
+        // than an annotated reference, and two overloads differing only by constraint are distinct.
+        // The self-referential `Box<T, TProvider>` field exercises oblivious-vs-not-annotated type
+        // parameter nullability that the writer must reconcile.
+        await AssertRoundTripsAsync("""
+            namespace N
+            {
+                public interface IProvider<T> { }
+
+                public sealed class Box<T, TProvider>
+                    where T : struct
+                    where TProvider : IProvider<T>
+                {
+                    public class Inner
+                    {
+                        public static readonly Box<T, TProvider>.Inner Instance = null!;
+                    }
+
+                    public T? Wrap(T value) => value;
+                }
+
+                public static class Ext
+                {
+                    public static void M<T, TProvider>(T? value)
+                        where T : struct
+                        where TProvider : IProvider<T> { }
+
+                    public static void M<T, TProvider>(T? value)
+                        where T : class
+                        where TProvider : IProvider<T> { }
+                }
+            }
+            """, nullable: true);
+    }
+
     /// <summary>Generates a <c>.cssig</c> from <paramref name="source"/> and asserts that feeding it
     /// back through the analyzer reports no diagnostics.</summary>
     private static async Task AssertRoundTripsAsync(
