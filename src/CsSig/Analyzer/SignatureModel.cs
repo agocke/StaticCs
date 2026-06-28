@@ -20,15 +20,22 @@ internal abstract partial record TypeRef
         string Namespace,
         TypeRef? ContainingType,
         string Name,
-        EqArray<TypeRef> TypeArguments) : TypeRef;
+        EqArray<TypeRef> TypeArguments
+    ) : TypeRef;
+
     public sealed record Array(TypeRef ElementType, int Rank) : TypeRef;
+
     public sealed record Pointer(TypeRef ElementType) : TypeRef;
+
     public sealed record TypeParameter(int Ordinal, bool IsMethodTypeParameter) : TypeRef;
+
     public sealed record FunctionPointer(
         SignatureCallingConvention CallingConvention,
         EqArray<TypeRef> CallingConventionTypes,
         ParamKey Return,
-        EqArray<ParamKey> Parameters) : TypeRef;
+        EqArray<ParamKey> Parameters
+    ) : TypeRef;
+
     public sealed record Dynamic : TypeRef
     {
         public static readonly Dynamic Instance = new();
@@ -50,7 +57,8 @@ partial record TypeRef
             case ITypeParameterSymbol typeParameter:
                 return new TypeParameter(
                     typeParameter.Ordinal,
-                    typeParameter.TypeParameterKind == TypeParameterKind.Method);
+                    typeParameter.TypeParameterKind == TypeParameterKind.Method
+                );
 
             case IDynamicTypeSymbol:
                 return Dynamic.Instance;
@@ -59,34 +67,61 @@ partial record TypeRef
             {
                 var signature = functionPointer.Signature;
                 var callingConventionTypes = EqArray<TypeRef>.From(
-                    signature.UnmanagedCallingConventionTypes.Select(From));
+                    signature.UnmanagedCallingConventionTypes.Select(From)
+                );
                 var @return = new ParamKey(From(signature.ReturnType), signature.RefKind);
                 var parameters = EqArray<ParamKey>.From(
-                    signature.Parameters.Select(p => new ParamKey(From(p.Type), p.RefKind)));
+                    signature.Parameters.Select(p => new ParamKey(From(p.Type), p.RefKind))
+                );
                 return new FunctionPointer(
-                    signature.CallingConvention, callingConventionTypes, @return, parameters);
+                    signature.CallingConvention,
+                    callingConventionTypes,
+                    @return,
+                    parameters
+                );
             }
 
             case INamedTypeSymbol named:
-                var container = named.ContainingType is { } containingType ? From(containingType) : null;
-                var @namespace = container is null ? NamespaceName(named.ContainingNamespace) : string.Empty;
+                var container = named.ContainingType is { } containingType
+                    ? From(containingType)
+                    : null;
+                var @namespace = container is null
+                    ? NamespaceName(named.ContainingNamespace)
+                    : string.Empty;
+
+                if (ExtensionMembers.IsExtension(named))
+                {
+                    // An extension block's metadata name is an unspeakable content hash that depends
+                    // on its members, so two compilations agree only when every member agrees.
+                    // Identify it structurally by its receiver type instead, so members are paired
+                    // by the receiver they extend, independent of their sibling members.
+                    var receiver = ExtensionMembers.Receiver(named);
+                    var receiverArgs = receiver is null
+                        ? default
+                        : EqArray<TypeRef>.From(new[] { From(receiver.Type) });
+                    return new Named(@namespace, container, ExtensionMembers.Name, receiverArgs);
+                }
+
                 return new Named(
                     @namespace,
                     container,
                     named.Name,
-                    EqArray<TypeRef>.From(named.TypeArguments.Select(From)));
+                    EqArray<TypeRef>.From(named.TypeArguments.Select(From))
+                );
 
             default:
                 // The ITypeSymbol hierarchy above is exhaustive (array, pointer, type parameter,
                 // dynamic, function pointer, named/error). Anything else cannot be modeled
                 // structurally, so fail loudly rather than invent a comparison.
                 throw new ArgumentException(
-                    $"Cannot build a type reference from type kind '{type.TypeKind}'.", nameof(type));
+                    $"Cannot build a type reference from type kind '{type.TypeKind}'.",
+                    nameof(type)
+                );
         }
     }
 
-    private static string NamespaceName(INamespaceSymbol? @namespace)
-        => @namespace is null || @namespace.IsGlobalNamespace
+    private static string NamespaceName(INamespaceSymbol? @namespace) =>
+        @namespace is null || @namespace.IsGlobalNamespace
             ? string.Empty
             : @namespace.ToDisplayString();
 }
@@ -228,7 +263,11 @@ internal readonly record struct ParamKey(TypeRef Type, RefKind RefKind);
 /// <c>ref readonly</c> vs <c>in</c>), and the nullable annotations of its type. None of these change
 /// the binary calling convention.
 /// </summary>
-internal readonly record struct SourceParam(string Name, ParamModifiers Modifiers, Nullability Nullability);
+internal readonly record struct SourceParam(
+    string Name,
+    ParamModifiers Modifiers,
+    Nullability Nullability
+);
 
 /// <summary>
 /// The identity of an API member: the tuple by which two members from different compilations are
@@ -240,7 +279,8 @@ internal sealed record MemberIdentity(
     TypeRef? ContainingType,
     string Name,
     int Arity,
-    EqArray<ParamKey> Parameters);
+    EqArray<ParamKey> Parameters
+);
 
 /// <summary>
 /// The aspects of a type declaration observable to <em>every</em> consumer (source or binary):
@@ -270,7 +310,10 @@ internal abstract record SourceMember
     public sealed record Type(CommonTypeAspects Common) : SourceMember;
 
     public sealed record Method(
-        CommonMethodAspects Common, Nullability ReturnNullability, EqArray<SourceParam> Parameters) : SourceMember;
+        CommonMethodAspects Common,
+        Nullability ReturnNullability,
+        EqArray<SourceParam> Parameters
+    ) : SourceMember;
 
     public sealed record Field(CommonFieldAspects Common, Nullability Nullability) : SourceMember;
 
@@ -307,9 +350,10 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
     public static ApiMember From(ISymbol symbol)
     {
         var containingType = symbol.ContainingType is { } type ? TypeRef.From(type) : null;
-        var @namespace = containingType is null && symbol.ContainingNamespace is { IsGlobalNamespace: false } ns
-            ? ns.ToDisplayString()
-            : string.Empty;
+        var @namespace =
+            containingType is null && symbol.ContainingNamespace is { IsGlobalNamespace: false } ns
+                ? ns.ToDisplayString()
+                : string.Empty;
 
         // Every flag bit except a field's ReadOnly/HasConstantValue is reported generically by the
         // symbol: types expose IsAbstract/IsSealed, members expose virtuality, and the rest are
@@ -320,52 +364,99 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
         {
             case INamedTypeSymbol named:
             {
+                // Extension blocks share an unspeakable empty name; key them by their receiver so
+                // two blocks that extend different receivers are distinct and members never collide.
+                var isExtension = ExtensionMembers.IsExtension(named);
+                var name = isExtension ? ExtensionMembers.Name : named.Name;
+                var typeParameters = isExtension ? ExtensionReceiverKey(named) : default;
                 var identity = new MemberIdentity(
-                    ApiMemberKind.Type, @namespace, containingType, named.Name, named.Arity, default);
+                    ApiMemberKind.Type,
+                    @namespace,
+                    containingType,
+                    name,
+                    named.Arity,
+                    typeParameters
+                );
                 var common = new CommonTypeAspects(flags);
-                return new ApiMember(identity, new SourceMember.Type(common), new BinaryMember.Type(common));
+                return new ApiMember(
+                    identity,
+                    new SourceMember.Type(common),
+                    new BinaryMember.Type(common)
+                );
             }
 
             case IMethodSymbol method:
             {
                 var keys = EqArray<ParamKey>.From(
-                    method.Parameters.Select(p => new ParamKey(TypeRef.From(p.Type), BinaryRefKind(p.RefKind))));
+                    method.Parameters.Select(p => new ParamKey(
+                        TypeRef.From(p.Type),
+                        BinaryRefKind(p.RefKind)
+                    ))
+                );
                 var parameters = EqArray<SourceParam>.From(
-                    method.Parameters.Select(p => new SourceParam(p.Name, ParamModifiersFrom(p), Nullability.Of(p.Type))));
+                    method.Parameters.Select(p => new SourceParam(
+                        p.Name,
+                        ParamModifiersFrom(p),
+                        Nullability.Of(p.Type)
+                    ))
+                );
                 var identity = new MemberIdentity(
-                    ApiMemberKind.Method, @namespace, containingType, method.Name, method.Arity, keys);
+                    ApiMemberKind.Method,
+                    @namespace,
+                    containingType,
+                    method.Name,
+                    method.Arity,
+                    keys
+                );
                 var common = new CommonMethodAspects(
                     TypeRef.From(method.ReturnType),
-                    flags | (method.IsReadOnly ? MemberFlags.ReadOnly : MemberFlags.None));
+                    flags | (method.IsReadOnly ? MemberFlags.ReadOnly : MemberFlags.None)
+                );
                 return new ApiMember(
                     identity,
                     new SourceMember.Method(common, Nullability.Of(method.ReturnType), parameters),
-                    new BinaryMember.Method(common));
+                    new BinaryMember.Method(common)
+                );
             }
 
             case IFieldSymbol field:
             {
                 var identity = new MemberIdentity(
-                    ApiMemberKind.Field, @namespace, containingType, field.Name, Arity: 0, default);
-                flags |= (field.IsReadOnly ? MemberFlags.ReadOnly : MemberFlags.None)
+                    ApiMemberKind.Field,
+                    @namespace,
+                    containingType,
+                    field.Name,
+                    Arity: 0,
+                    default
+                );
+                flags |=
+                    (field.IsReadOnly ? MemberFlags.ReadOnly : MemberFlags.None)
                     | (field.HasConstantValue ? MemberFlags.HasConstantValue : MemberFlags.None);
                 var common = new CommonFieldAspects(TypeRef.From(field.Type), flags);
                 var constant = field.HasConstantValue ? FormatConstant(field.ConstantValue) : null;
                 return new ApiMember(
                     identity,
                     new SourceMember.Field(common, Nullability.Of(field.Type)),
-                    new BinaryMember.Field(common, constant));
+                    new BinaryMember.Field(common, constant)
+                );
             }
 
             case IEventSymbol @event:
             {
                 var identity = new MemberIdentity(
-                    ApiMemberKind.Event, @namespace, containingType, @event.Name, Arity: 0, default);
+                    ApiMemberKind.Event,
+                    @namespace,
+                    containingType,
+                    @event.Name,
+                    Arity: 0,
+                    default
+                );
                 var common = new CommonEventAspects(TypeRef.From(@event.Type), flags);
                 return new ApiMember(
                     identity,
                     new SourceMember.Event(common, Nullability.Of(@event.Type)),
-                    new BinaryMember.Event(common));
+                    new BinaryMember.Event(common)
+                );
             }
 
             default:
@@ -373,35 +464,51 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
                 // IsTrackedApi/GetApiMembers). Any other kind cannot be credibly modeled or
                 // compared, so fail loudly rather than synthesize a meaningless member.
                 throw new ArgumentException(
-                    $"Cannot build an API member from symbol kind '{symbol.Kind}'.", nameof(symbol));
+                    $"Cannot build an API member from symbol kind '{symbol.Kind}'.",
+                    nameof(symbol)
+                );
         }
     }
 
-    private static MemberFlags FlagsFrom(ISymbol symbol)
-        => (symbol.IsStatic ? MemberFlags.Static : MemberFlags.None)
-            | (symbol.IsVirtual ? MemberFlags.Virtual : MemberFlags.None)
-            | (symbol.IsAbstract ? MemberFlags.Abstract : MemberFlags.None)
-            | (symbol.IsOverride ? MemberFlags.Override : MemberFlags.None)
-            | (symbol.IsSealed ? MemberFlags.Sealed : MemberFlags.None);
+    private static MemberFlags FlagsFrom(ISymbol symbol) =>
+        (symbol.IsStatic ? MemberFlags.Static : MemberFlags.None)
+        | (symbol.IsVirtual ? MemberFlags.Virtual : MemberFlags.None)
+        | (symbol.IsAbstract ? MemberFlags.Abstract : MemberFlags.None)
+        | (symbol.IsOverride ? MemberFlags.Override : MemberFlags.None)
+        | (symbol.IsSealed ? MemberFlags.Sealed : MemberFlags.None);
 
-    private static ParamModifiers ParamModifiersFrom(IParameterSymbol parameter)
-        => (parameter.IsParams ? ParamModifiers.Params : ParamModifiers.None)
-            | (parameter.IsThis ? ParamModifiers.This : ParamModifiers.None)
-            | (parameter.HasExplicitDefaultValue ? ParamModifiers.Optional : ParamModifiers.None)
-            | (parameter.RefKind == RefReadOnlyParameter ? ParamModifiers.RefReadOnly : ParamModifiers.None);
-
-    // RefKind.RefReadOnlyParameter (C# 12) is not defined in the Roslyn baseline this analyzer
-    // compiles against, but the host compiler reports it at runtime. Reference it by its numeric
-    // value so the analyzer keeps targeting the older Roslyn version.
-    private const RefKind RefReadOnlyParameter = (RefKind)4;
+    private static ParamModifiers ParamModifiersFrom(IParameterSymbol parameter) =>
+        (parameter.IsParams ? ParamModifiers.Params : ParamModifiers.None)
+        | (parameter.IsThis ? ParamModifiers.This : ParamModifiers.None)
+        | (parameter.HasExplicitDefaultValue ? ParamModifiers.Optional : ParamModifiers.None)
+        | (
+            parameter.RefKind == RefKind.RefReadOnlyParameter
+                ? ParamModifiers.RefReadOnly
+                : ParamModifiers.None
+        );
 
     // `in` and `ref readonly` parameters share the same binary calling convention (both an
     // `in`-flagged byref with a `modreq(InAttribute)`); `ref readonly` only adds a source-level
     // `RequiresLocationAttribute`. Identity therefore pairs them, and the source difference is
     // carried by ParamModifiers.RefReadOnly so it surfaces as a source-only modification.
-    private static RefKind BinaryRefKind(RefKind refKind)
-        => refKind == RefReadOnlyParameter ? RefKind.In : refKind;
+    private static RefKind BinaryRefKind(RefKind refKind) =>
+        refKind == RefKind.RefReadOnlyParameter ? RefKind.In : refKind;
 
-    private static string FormatConstant(object? value)
-        => value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";
+    /// <summary>
+    /// The identity contribution of an extension block: its receiver parameter, encoded as a single
+    /// <see cref="ParamKey"/>, so that <see cref="MemberIdentity"/> distinguishes blocks by the
+    /// receiver they extend (the receiver may reference the block's own type parameters).
+    /// </summary>
+    private static EqArray<ParamKey> ExtensionReceiverKey(INamedTypeSymbol extension)
+    {
+        var receiver = ExtensionMembers.Receiver(extension);
+        return receiver is null
+            ? default
+            : EqArray<ParamKey>.From(
+                new[] { new ParamKey(TypeRef.From(receiver.Type), BinaryRefKind(receiver.RefKind)) }
+            );
+    }
+
+    private static string FormatConstant(object? value) =>
+        value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";
 }

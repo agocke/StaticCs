@@ -52,16 +52,27 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         var document = context.Document;
         var project = document.Project;
 
-        var compilation = await project.GetCompilationAsync(context.CancellationToken).ConfigureAwait(false);
-        var model = await document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        var root = await document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
+        var compilation = await project
+            .GetCompilationAsync(context.CancellationToken)
+            .ConfigureAwait(false);
+        var model = await document
+            .GetSemanticModelAsync(context.CancellationToken)
+            .ConfigureAwait(false);
+        var root = await document
+            .GetSyntaxRootAsync(context.CancellationToken)
+            .ConfigureAwait(false);
         if (compilation is null || model is null || root is null)
         {
             return;
         }
 
         var diagnostic = context.Diagnostics[0];
-        var symbol = ResolveMember(model, root, diagnostic.Location.SourceSpan, context.CancellationToken);
+        var symbol = ResolveMember(
+            model,
+            root,
+            diagnostic.Location.SourceSpan,
+            context.CancellationToken
+        );
         if (symbol is null)
         {
             return;
@@ -74,7 +85,9 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         }
 
         var key = CsSigWriter.TopLevelKey(topLevel);
-        var index = await SignatureIndex.BuildAsync(project, context.CancellationToken).ConfigureAwait(false);
+        var index = await SignatureIndex
+            .BuildAsync(project, context.CancellationToken)
+            .ConfigureAwait(false);
 
         if (index.OwnerOf(key) is { } owner)
         {
@@ -83,8 +96,10 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
                 CodeAction.Create(
                     $"Add missing API to '{owner.Name}'",
                     ct => RegenerateOwningFileAsync(project, owner, index, key, ct),
-                    equivalenceKey: ToPublicApiKey),
-                diagnostic);
+                    equivalenceKey: ToPublicApiKey
+                ),
+                diagnostic
+            );
             return;
         }
 
@@ -94,20 +109,29 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             CodeAction.Create(
                 $"Add API to '{DefaultFileName}'",
                 ct => AddTypeToNamedFileAsync(project, DefaultFileName, index, key, ct),
-                equivalenceKey: ToPublicApiKey),
-            diagnostic);
+                equivalenceKey: ToPublicApiKey
+            ),
+            diagnostic
+        );
         context.RegisterCodeFix(
             CodeAction.Create(
                 $"Add API to '{perTypeName}'",
                 ct => AddTypeToNamedFileAsync(project, perTypeName, index, key, ct),
-                equivalenceKey: ToTypeFileKey),
-            diagnostic);
+                equivalenceKey: ToTypeFileKey
+            ),
+            diagnostic
+        );
     }
 
     /// <summary>Regenerates the file that already owns <paramref name="key"/> from the project's
     /// current surface.</summary>
     private static async Task<Solution> RegenerateOwningFileAsync(
-        Project project, TextDocument owner, SignatureIndex index, string key, CancellationToken ct)
+        Project project,
+        TextDocument owner,
+        SignatureIndex index,
+        string key,
+        CancellationToken ct
+    )
     {
         var assembly = (await project.GetCompilationAsync(ct).ConfigureAwait(false))?.Assembly;
         if (assembly is null)
@@ -123,7 +147,12 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
     /// <summary>Adds <paramref name="key"/>'s type to the file named <paramref name="fileName"/>,
     /// creating it if necessary, otherwise regenerating it with the type included.</summary>
     private static async Task<Solution> AddTypeToNamedFileAsync(
-        Project project, string fileName, SignatureIndex index, string key, CancellationToken ct)
+        Project project,
+        string fileName,
+        SignatureIndex index,
+        string key,
+        CancellationToken ct
+    )
     {
         var assembly = (await project.GetCompilationAsync(ct).ConfigureAwait(false))?.Assembly;
         if (assembly is null)
@@ -136,20 +165,32 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         {
             var keys = new HashSet<string>(index.KeysOwnedBy(existing.Id)) { key };
             var updated = CsSigWriter.Write(assembly, keys);
-            return project.Solution.WithAdditionalDocumentText(existing.Id, SourceText.From(updated));
+            return project.Solution.WithAdditionalDocumentText(
+                existing.Id,
+                SourceText.From(updated)
+            );
         }
 
         var text = CsSigWriter.Write(assembly, new HashSet<string> { key });
         return project
-            .AddAdditionalDocument(fileName, SourceText.From(text), filePath: FilePathFor(project, fileName))
+            .AddAdditionalDocument(
+                fileName,
+                SourceText.From(text),
+                filePath: FilePathFor(project, fileName)
+            )
             .Project.Solution;
     }
 
     private static string FilePathFor(Project project, string fileName)
     {
         var dir = project.FilePath is { } p ? Path.GetDirectoryName(p) : null;
-        if (dir is null
-            && project.AdditionalDocuments.Select(d => d.FilePath).FirstOrDefault(d => d is not null) is { } existing)
+        if (
+            dir is null
+            && project
+                .AdditionalDocuments.Select(d => d.FilePath)
+                .FirstOrDefault(d => d is not null)
+                is { } existing
+        )
         {
             dir = Path.GetDirectoryName(existing);
         }
@@ -161,10 +202,11 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
     /// a signature file declares. Property/event accessors are normalized to their owning member.</summary>
     private static INamedTypeSymbol? TopLevelType(ISymbol symbol)
     {
-        var member = symbol is IMethodSymbol { AssociatedSymbol: { } associated }
+        var member =
+            symbol is IMethodSymbol { AssociatedSymbol: { } associated }
             && associated is IPropertySymbol or IEventSymbol
-            ? associated
-            : symbol;
+                ? associated
+                : symbol;
 
         var type = member as INamedTypeSymbol ?? member.ContainingType;
         if (type is null)
@@ -182,13 +224,25 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
 
     /// <summary>Resolves the declared symbol the CSSIG002 diagnostic refers to, walking up from the
     /// node at <paramref name="span"/> until a member or type symbol is found.</summary>
-    private static ISymbol? ResolveMember(SemanticModel model, SyntaxNode root, TextSpan span, CancellationToken ct)
+    private static ISymbol? ResolveMember(
+        SemanticModel model,
+        SyntaxNode root,
+        TextSpan span,
+        CancellationToken ct
+    )
     {
         var node = root.FindNode(span, getInnermostNodeForTie: true);
         for (var current = node; current is not null; current = current.Parent)
         {
             var declared = model.GetDeclaredSymbol(current, ct);
-            if (declared is INamedTypeSymbol or IMethodSymbol or IPropertySymbol or IEventSymbol or IFieldSymbol)
+            if (
+                declared
+                is INamedTypeSymbol
+                    or IMethodSymbol
+                    or IPropertySymbol
+                    or IEventSymbol
+                    or IFieldSymbol
+            )
             {
                 return declared;
             }
@@ -202,12 +256,15 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         return null;
     }
 
-    private static bool IsSignatureFile(TextDocument doc)
-        => (doc.FilePath ?? doc.Name).EndsWith(Extension, System.StringComparison.OrdinalIgnoreCase);
+    private static bool IsSignatureFile(TextDocument doc) =>
+        (doc.FilePath ?? doc.Name).EndsWith(Extension, System.StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The keys (see <see cref="CsSigWriter.TopLevelKey"/>) of the top-level types declared
     /// in a <c>.cssig</c> document.</summary>
-    private static async Task<HashSet<string>> TopLevelKeysAsync(TextDocument doc, CancellationToken ct)
+    private static async Task<HashSet<string>> TopLevelKeysAsync(
+        TextDocument doc,
+        CancellationToken ct
+    )
     {
         var keys = new HashSet<string>();
         var text = await doc.GetTextAsync(ct).ConfigureAwait(false);
@@ -230,7 +287,9 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
     private static string SyntaxTopLevelKey(BaseTypeDeclarationSyntax type)
     {
         var ns = NamespaceName(type);
-        var arity = type is TypeDeclarationSyntax { TypeParameterList: { } list } ? list.Parameters.Count : 0;
+        var arity = type is TypeDeclarationSyntax { TypeParameterList: { } list }
+            ? list.Parameters.Count
+            : 0;
         var name = arity > 0 ? type.Identifier.ValueText + "`" + arity : type.Identifier.ValueText;
         return ns.Length > 0 ? ns + "." + name : name;
     }
@@ -261,7 +320,8 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         private SignatureIndex(
             Dictionary<string, TextDocument> ownerByKey,
             Dictionary<DocumentId, HashSet<string>> keysByDocument,
-            List<TextDocument> documents)
+            List<TextDocument> documents
+        )
         {
             _ownerByKey = ownerByKey;
             _keysByDocument = keysByDocument;
@@ -293,13 +353,16 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             return new SignatureIndex(ownerByKey, keysByDocument, documents);
         }
 
-        public TextDocument? OwnerOf(string key) => _ownerByKey.TryGetValue(key, out var doc) ? doc : null;
+        public TextDocument? OwnerOf(string key) =>
+            _ownerByKey.TryGetValue(key, out var doc) ? doc : null;
 
-        public IEnumerable<string> KeysOwnedBy(DocumentId id)
-            => _keysByDocument.TryGetValue(id, out var keys) ? keys : Enumerable.Empty<string>();
+        public IEnumerable<string> KeysOwnedBy(DocumentId id) =>
+            _keysByDocument.TryGetValue(id, out var keys) ? keys : Enumerable.Empty<string>();
 
-        public TextDocument? DocumentNamed(string name)
-            => _documents.FirstOrDefault(d => string.Equals(d.Name, name, System.StringComparison.OrdinalIgnoreCase));
+        public TextDocument? DocumentNamed(string name) =>
+            _documents.FirstOrDefault(d =>
+                string.Equals(d.Name, name, System.StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     private sealed class CsSigFixAllProvider : FixAllProvider
@@ -317,8 +380,16 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             var strategy = fixAllContext.CodeActionEquivalenceKey ?? ToPublicApiKey;
             return CodeAction.Create(
                 "Add missing API to .cssig files",
-                ct => ApplyAsync(fixAllContext.Solution, fixAllContext.Project, diagnostics, strategy, ct),
-                equivalenceKey: strategy);
+                ct =>
+                    ApplyAsync(
+                        fixAllContext.Solution,
+                        fixAllContext.Project,
+                        diagnostics,
+                        strategy,
+                        ct
+                    ),
+                equivalenceKey: strategy
+            );
         }
 
         private static async Task<ImmutableArray<Diagnostic>> GatherAsync(FixAllContext context)
@@ -326,14 +397,20 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             switch (context.Scope)
             {
                 case FixAllScope.Document when context.Document is { } document:
-                    return await context.GetDocumentDiagnosticsAsync(document).ConfigureAwait(false);
+                    return await context
+                        .GetDocumentDiagnosticsAsync(document)
+                        .ConfigureAwait(false);
                 case FixAllScope.Project:
-                    return await context.GetAllDiagnosticsAsync(context.Project).ConfigureAwait(false);
+                    return await context
+                        .GetAllDiagnosticsAsync(context.Project)
+                        .ConfigureAwait(false);
                 case FixAllScope.Solution:
                     var all = ImmutableArray.CreateBuilder<Diagnostic>();
                     foreach (var project in context.Solution.Projects)
                     {
-                        all.AddRange(await context.GetAllDiagnosticsAsync(project).ConfigureAwait(false));
+                        all.AddRange(
+                            await context.GetAllDiagnosticsAsync(project).ConfigureAwait(false)
+                        );
                     }
 
                     return all.ToImmutable();
@@ -349,7 +426,12 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
         /// from the project surface with the full set of types it should own.
         /// </summary>
         private static async Task<Solution> ApplyAsync(
-            Solution solution, Project project, ImmutableArray<Diagnostic> diagnostics, string strategy, CancellationToken ct)
+            Solution solution,
+            Project project,
+            ImmutableArray<Diagnostic> diagnostics,
+            string strategy,
+            CancellationToken ct
+        )
         {
             var assembly = (await project.GetCompilationAsync(ct).ConfigureAwait(false))?.Assembly;
             if (assembly is null)
@@ -360,8 +442,12 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             var index = await SignatureIndex.BuildAsync(project, ct).ConfigureAwait(false);
 
             // fileName -> the set of top-level keys that file should own after the fix.
-            var plan = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);
-            var existingByName = new Dictionary<string, TextDocument>(System.StringComparer.OrdinalIgnoreCase);
+            var plan = new Dictionary<string, HashSet<string>>(
+                System.StringComparer.OrdinalIgnoreCase
+            );
+            var existingByName = new Dictionary<string, TextDocument>(
+                System.StringComparer.OrdinalIgnoreCase
+            );
 
             foreach (var diagnostic in diagnostics)
             {
@@ -381,9 +467,10 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
                 }
                 else
                 {
-                    fileName = strategy == ToTypeFileKey
-                        ? TypeNameFromKey(key) + Extension
-                        : DefaultFileName;
+                    fileName =
+                        strategy == ToTypeFileKey
+                            ? TypeNameFromKey(key) + Extension
+                            : DefaultFileName;
                     target = index.DocumentNamed(fileName);
                 }
 
@@ -413,17 +500,27 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
                 {
                     var id = DocumentId.CreateNewId(project.Id);
                     solution = solution.AddAdditionalDocument(
-                        id, entry.Key, text, filePath: FilePathFor(project, entry.Key));
+                        id,
+                        entry.Key,
+                        text,
+                        filePath: FilePathFor(project, entry.Key)
+                    );
                 }
             }
 
             return solution;
         }
 
-        private static async Task<string?> ResolveKeyAsync(Solution solution, Diagnostic diagnostic, CancellationToken ct)
+        private static async Task<string?> ResolveKeyAsync(
+            Solution solution,
+            Diagnostic diagnostic,
+            CancellationToken ct
+        )
         {
-            if (diagnostic.Location.SourceTree is not { } tree
-                || solution.GetDocument(tree) is not { } document)
+            if (
+                diagnostic.Location.SourceTree is not { } tree
+                || solution.GetDocument(tree) is not { } document
+            )
             {
                 return null;
             }

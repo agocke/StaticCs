@@ -4,10 +4,9 @@ using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.Testing.Verifiers;
+using Microsoft.CodeAnalysis.CSharp.Testing;
 using Xunit;
 
 namespace StaticCs.Tests;
@@ -343,11 +342,11 @@ class C
 
     private static readonly DiagnosticResult ClosedEnumConversion = CSharpAnalyzerVerifier<
         EnumClosedConversionAnalyzer,
-        XUnitVerifier
+        DefaultVerifier
     >.Diagnostic(DiagId.ClosedEnumConversion.ToIdString());
     private static readonly DiagnosticResult ClassOrRecordMustBeClosed = CSharpAnalyzerVerifier<
         ClosedDeclarationChecker,
-        XUnitVerifier
+        DefaultVerifier
     >.Diagnostic(DiagId.ClassOrRecordMustBeClosed.ToIdString());
 
     private Task VerifyDiagnostics<TAnalyzer>(string src, params DiagnosticResult[] expected)

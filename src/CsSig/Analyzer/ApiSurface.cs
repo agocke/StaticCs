@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -21,26 +22,23 @@ internal static class ApiSurface
     /// A readable signature format, used only for diagnostic messages. Equivalence is decided by
     /// the structural <see cref="ApiMember"/>, not by this string.
     /// </summary>
-    private static readonly SymbolDisplayFormat s_displayFormat =
-        new(
-            globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining,
-            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-            propertyStyle: SymbolDisplayPropertyStyle.ShowReadWriteDescriptor,
-            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-            memberOptions:
-                SymbolDisplayMemberOptions.IncludeParameters |
-                SymbolDisplayMemberOptions.IncludeContainingType |
-                SymbolDisplayMemberOptions.IncludeExplicitInterface |
-                SymbolDisplayMemberOptions.IncludeModifiers |
-                SymbolDisplayMemberOptions.IncludeConstantValue,
-            parameterOptions:
-                SymbolDisplayParameterOptions.IncludeExtensionThis |
-                SymbolDisplayParameterOptions.IncludeParamsRefOut |
-                SymbolDisplayParameterOptions.IncludeType |
-                SymbolDisplayParameterOptions.IncludeName |
-                SymbolDisplayParameterOptions.IncludeDefaultValue,
-            miscellaneousOptions:
-                SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+    private static readonly SymbolDisplayFormat s_displayFormat = new(
+        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining,
+        typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+        propertyStyle: SymbolDisplayPropertyStyle.ShowReadWriteDescriptor,
+        genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
+        memberOptions: SymbolDisplayMemberOptions.IncludeParameters
+            | SymbolDisplayMemberOptions.IncludeContainingType
+            | SymbolDisplayMemberOptions.IncludeExplicitInterface
+            | SymbolDisplayMemberOptions.IncludeModifiers
+            | SymbolDisplayMemberOptions.IncludeConstantValue,
+        parameterOptions: SymbolDisplayParameterOptions.IncludeExtensionThis
+            | SymbolDisplayParameterOptions.IncludeParamsRefOut
+            | SymbolDisplayParameterOptions.IncludeType
+            | SymbolDisplayParameterOptions.IncludeName
+            | SymbolDisplayParameterOptions.IncludeDefaultValue,
+        miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+    );
 
     /// <summary>
     /// Builds a map from the structural signature of every externally visible member declared in
@@ -57,26 +55,23 @@ internal static class ApiSurface
                 continue;
             }
 
-            Add(map, type);
+            Add(type);
 
-            foreach (var member in GetApiMembers(type))
-            {
-                Add(map, member);
-            }
+            AddApiMembers(type, Add);
         }
 
         return map;
-    }
 
-    private static void Add(Dictionary<MemberIdentity, ApiEntry> map, ISymbol symbol)
-    {
-        var member = ApiMember.From(symbol);
-        if (map.ContainsKey(member.Identity))
+        void Add(ISymbol symbol)
         {
-            return;
-        }
+            var member = ApiMember.From(symbol);
+            if (map.ContainsKey(member.Identity))
+            {
+                return;
+            }
 
-        map.Add(member.Identity, new ApiEntry(member, GetLocation(symbol), GetDisplay(symbol)));
+            map.Add(member.Identity, new ApiEntry(member, GetLocation(symbol), GetDisplay(symbol)));
+        }
     }
 
     private static Location GetLocation(ISymbol symbol)
@@ -92,7 +87,7 @@ internal static class ApiSurface
 
     /// <summary>Yields the tracked members of <paramref name="type"/>, including implicit
     /// constructors and implicit record members, mirroring the Public API analyzer.</summary>
-    private static IEnumerable<ISymbol> GetApiMembers(INamedTypeSymbol type)
+    private static void AddApiMembers(INamedTypeSymbol type, Action<ISymbol> add)
     {
         foreach (var member in type.GetMembers())
         {
@@ -109,46 +104,69 @@ internal static class ApiSurface
 
             if (IsTrackedApi(member))
             {
-                yield return member;
+                add(member);
             }
         }
 
         // Implicitly declared (parameterless) constructor.
         IMethodSymbol? implicitConstructor = null;
-        if (type is { TypeKind: TypeKind.Class, InstanceConstructors.Length: 1 } or { TypeKind: TypeKind.Struct })
+        if (
+            type
+            is { TypeKind: TypeKind.Class, InstanceConstructors.Length: 1 }
+                or { TypeKind: TypeKind.Struct }
+        )
         {
-            implicitConstructor = type.InstanceConstructors.FirstOrDefault(static c => c.IsImplicitlyDeclared);
+            implicitConstructor = type.InstanceConstructors.FirstOrDefault(static c =>
+                c.IsImplicitlyDeclared
+            );
             if (implicitConstructor is not null && IsTrackedApi(implicitConstructor))
             {
-                yield return implicitConstructor;
+                add(implicitConstructor);
             }
         }
 
         // Implicitly declared members of a record (Equals, GetHashCode, Deconstruct, copy ctor,
         // positional property accessors, ...).
+        //
+        // A static class hosting extension blocks also carries implicit *implementation* methods
+        // for each extension member (e.g. `get_Empty`, `TryFirst`). Those are implementation
+        // details: the members themselves are tracked through the extension marker types, so skip
+        // the implicit-method pass for such classes to avoid double-counting.
+        bool hostsExtensions = ExtensionMembers.ContainsExtension(type);
         foreach (var member in type.GetMembers())
         {
+            if (hostsExtensions)
+            {
+                break;
+            }
+
             if (SymbolEqualityComparer.Default.Equals(member, implicitConstructor))
             {
                 continue;
             }
 
-            if (member is IMethodSymbol { IsImplicitlyDeclared: true } method && IsTrackedApi(method))
+            if (
+                member is IMethodSymbol { IsImplicitlyDeclared: true } method
+                && IsTrackedApi(method)
+            )
             {
                 // Skip accessors of explicit (non-implicit) properties: those properties are
                 // tracked through their own accessor callbacks already. Keep accessors that
                 // belong to implicit properties (e.g. record `EqualityContract`).
-                if (method.MethodKind is not (MethodKind.PropertyGet or MethodKind.PropertySet) ||
-                    method is { AssociatedSymbol.IsImplicitlyDeclared: true })
+                if (
+                    method.MethodKind is not (MethodKind.PropertyGet or MethodKind.PropertySet)
+                    || method is { AssociatedSymbol.IsImplicitlyDeclared: true }
+                )
                 {
-                    yield return method;
+                    add(method);
                 }
             }
         }
     }
 
-    private static IEnumerable<INamedTypeSymbol> AllNamedTypes(INamespaceSymbol root)
+    private static List<INamedTypeSymbol> AllNamedTypes(INamespaceSymbol root)
     {
+        var result = new List<INamedTypeSymbol>();
         var stack = new Stack<INamespaceOrTypeSymbol>();
         stack.Push(root);
 
@@ -163,12 +181,14 @@ internal static class ApiSurface
                         stack.Push(ns);
                         break;
                     case INamedTypeSymbol type:
-                        yield return type;
+                        result.Add(type);
                         stack.Push(type);
                         break;
                 }
             }
         }
+
+        return result;
     }
 
     /// <summary>
@@ -186,13 +206,22 @@ internal static class ApiSurface
             }
 
             // Enum constructors are not user-visible API.
-            if (methodSymbol is { MethodKind: MethodKind.Constructor, ContainingType.TypeKind: TypeKind.Enum })
+            if (
+                methodSymbol is
+                { MethodKind: MethodKind.Constructor, ContainingType.TypeKind: TypeKind.Enum }
+            )
             {
                 return false;
             }
 
             // For delegates, only the 'Invoke' method carries the signature.
-            if (methodSymbol is { ContainingType.TypeKind: TypeKind.Delegate, MethodKind: not MethodKind.DelegateInvoke })
+            if (
+                methodSymbol is
+                {
+                    ContainingType.TypeKind: TypeKind.Delegate,
+                    MethodKind: not MethodKind.DelegateInvoke
+                }
+            )
             {
                 return false;
             }
@@ -217,7 +246,10 @@ internal static class ApiSurface
                 case Accessibility.ProtectedOrInternal:
                     // Protected members are only externally visible if the containing type can
                     // actually be extended outside the assembly.
-                    if (current.ContainingType is not { } container || !CanTypeBeExtended(container))
+                    if (
+                        current.ContainingType is not { } container
+                        || !CanTypeBeExtended(container)
+                    )
                     {
                         return false;
                     }
@@ -233,13 +265,16 @@ internal static class ApiSurface
     {
         // A type can be extended publicly if it isn't sealed and has a constructor that is not
         // internal, private, or protected-and-internal.
-        return !type.IsSealed &&
-            type.GetMembers(InstanceConstructorName).Any(static m => m.DeclaredAccessibility switch
-            {
-                Accessibility.Internal or Accessibility.ProtectedAndInternal => false,
-                Accessibility.Private => false,
-                _ => true,
-            });
+        return !type.IsSealed
+            && type.GetMembers(InstanceConstructorName)
+                .Any(static m =>
+                    m.DeclaredAccessibility switch
+                    {
+                        Accessibility.Internal or Accessibility.ProtectedAndInternal => false,
+                        Accessibility.Private => false,
+                        _ => true,
+                    }
+                );
     }
 
     /// <summary>

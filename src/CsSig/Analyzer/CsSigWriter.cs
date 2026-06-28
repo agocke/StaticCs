@@ -27,36 +27,34 @@ public static class CsSigWriter
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-        memberOptions:
-            SymbolDisplayMemberOptions.IncludeParameters |
-            SymbolDisplayMemberOptions.IncludeType |
-            SymbolDisplayMemberOptions.IncludeModifiers |
-            SymbolDisplayMemberOptions.IncludeAccessibility |
-            SymbolDisplayMemberOptions.IncludeConstantValue |
-            SymbolDisplayMemberOptions.IncludeRef |
-            SymbolDisplayMemberOptions.IncludeExplicitInterface,
+        memberOptions: SymbolDisplayMemberOptions.IncludeParameters
+            | SymbolDisplayMemberOptions.IncludeType
+            | SymbolDisplayMemberOptions.IncludeModifiers
+            | SymbolDisplayMemberOptions.IncludeAccessibility
+            | SymbolDisplayMemberOptions.IncludeConstantValue
+            | SymbolDisplayMemberOptions.IncludeRef
+            | SymbolDisplayMemberOptions.IncludeExplicitInterface,
         kindOptions: SymbolDisplayKindOptions.IncludeMemberKeyword,
         propertyStyle: SymbolDisplayPropertyStyle.ShowReadWriteDescriptor,
-        parameterOptions:
-            SymbolDisplayParameterOptions.IncludeType |
-            SymbolDisplayParameterOptions.IncludeName |
-            SymbolDisplayParameterOptions.IncludeParamsRefOut |
-            SymbolDisplayParameterOptions.IncludeExtensionThis |
-            SymbolDisplayParameterOptions.IncludeDefaultValue,
-        miscellaneousOptions:
-            SymbolDisplayMiscellaneousOptions.UseSpecialTypes |
-            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier |
-            SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
+        parameterOptions: SymbolDisplayParameterOptions.IncludeType
+            | SymbolDisplayParameterOptions.IncludeName
+            | SymbolDisplayParameterOptions.IncludeParamsRefOut
+            | SymbolDisplayParameterOptions.IncludeExtensionThis
+            | SymbolDisplayParameterOptions.IncludeDefaultValue,
+        miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+            | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier
+            | SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
+    );
 
     // A bare type reference, fully qualified, for return/parameter/underlying types.
     private static readonly SymbolDisplayFormat s_typeFormat = new(
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining,
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-        miscellaneousOptions:
-            SymbolDisplayMiscellaneousOptions.UseSpecialTypes |
-            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier |
-            SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
+        miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+            | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier
+            | SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
+    );
 
     /// <summary>Generates the <c>.cssig</c> text for <paramref name="compilation"/>'s public API.</summary>
     public static string Write(Compilation compilation) => Write(compilation.Assembly);
@@ -73,7 +71,9 @@ public static class CsSigWriter
     /// </summary>
     public static string Write(IAssemblySymbol assembly, ISet<string>? topLevelKeys)
     {
-        var byNamespace = new SortedDictionary<string, List<INamedTypeSymbol>>(StringComparer.Ordinal);
+        var byNamespace = new SortedDictionary<string, List<INamedTypeSymbol>>(
+            StringComparer.Ordinal
+        );
         foreach (var type in TopLevelTypes(assembly.GlobalNamespace))
         {
             if (!ApiSurface.IsTrackedApi(type))
@@ -86,7 +86,9 @@ public static class CsSigWriter
                 continue;
             }
 
-            var ns = type.ContainingNamespace is { IsGlobalNamespace: false } n ? n.ToDisplayString() : string.Empty;
+            var ns = type.ContainingNamespace is { IsGlobalNamespace: false } n
+                ? n.ToDisplayString()
+                : string.Empty;
             if (!byNamespace.TryGetValue(ns, out var list))
             {
                 byNamespace[ns] = list = new List<INamedTypeSymbol>();
@@ -145,7 +147,9 @@ public static class CsSigWriter
 
         if (type.TypeKind == TypeKind.Enum)
         {
-            foreach (var field in type.GetMembers().OfType<IFieldSymbol>().Where(f => f.HasConstantValue))
+            foreach (
+                var field in type.GetMembers().OfType<IFieldSymbol>().Where(f => f.HasConstantValue)
+            )
             {
                 builder.AppendLine(FormatMember(field));
             }
@@ -157,7 +161,27 @@ public static class CsSigWriter
                 builder.AppendLine(FormatMember(member));
             }
 
-            foreach (var nested in Sorted(type.GetMembers().OfType<INamedTypeSymbol>().Where(ApiSurface.IsTrackedApi)))
+            var nestedTypes = type.GetMembers()
+                .OfType<INamedTypeSymbol>()
+                .Where(ApiSurface.IsTrackedApi)
+                .ToList();
+
+            // Extension blocks are nested types with an unspeakable name; emit them as
+            // `extension(Receiver) { ... }` ordered by their header so the output is deterministic.
+            foreach (
+                var extension in nestedTypes
+                    .Where(ExtensionMembers.IsExtension)
+                    .OrderBy(ExtensionHeader, StringComparer.Ordinal)
+            )
+            {
+                WriteExtension(builder, extension);
+            }
+
+            foreach (
+                var nested in Sorted(
+                    nestedTypes.Where(static t => !ExtensionMembers.IsExtension(t))
+                )
+            )
             {
                 WriteType(builder, nested);
             }
@@ -165,6 +189,45 @@ public static class CsSigWriter
 
         builder.Dedent();
         builder.AppendLine("}");
+    }
+
+    private static void WriteExtension(IndentingBuilder builder, INamedTypeSymbol extension)
+    {
+        builder.AppendLine(ExtensionHeader(extension));
+        builder.AppendLine("{");
+        builder.Indent();
+
+        foreach (var member in Sorted(VisibleMembers(extension)))
+        {
+            builder.AppendLine(FormatMember(member));
+        }
+
+        builder.Dedent();
+        builder.AppendLine("}");
+    }
+
+    /// <summary>The header of an extension block, e.g. <c>extension(int)</c> or
+    /// <c>extension&lt;T&gt;(T[] source)</c>. The receiver is the block's marker type's receiver
+    /// parameter; its name is emitted only when the source declared one.</summary>
+    private static string ExtensionHeader(INamedTypeSymbol extension)
+    {
+        var receiver = ExtensionMembers.Receiver(extension);
+        var receiverText = receiver is null ? string.Empty : FormatReceiver(receiver);
+        return $"extension{TypeParameterList(extension)}({receiverText})";
+    }
+
+    private static string FormatReceiver(IParameterSymbol receiver)
+    {
+        var prefix = receiver.RefKind switch
+        {
+            RefKind.Ref => "ref ",
+            RefKind.Out => "out ",
+            RefKind.In => "in ",
+            _ => string.Empty,
+        };
+
+        var type = prefix + receiver.Type.ToDisplayString(s_typeFormat);
+        return receiver.Name.Length == 0 ? type : type + " " + receiver.Name;
     }
 
     /// <summary>Generates the body-less declaration text of a single member, exactly as it should
@@ -177,7 +240,8 @@ public static class CsSigWriter
             return $"{enumField.Name} = {FormatConstant(enumField.ConstantValue)},";
         }
 
-        var text = member.ToDisplayString(s_memberFormat)
+        var text = member
+            .ToDisplayString(s_memberFormat)
             .Replace("volatile ", string.Empty)
             .Replace("required ", string.Empty);
 
@@ -207,14 +271,16 @@ public static class CsSigWriter
             }
         }
 
-        parts.Add(type.TypeKind switch
-        {
-            TypeKind.Class => type.IsRecord ? "record" : "class",
-            TypeKind.Struct => type.IsRecord ? "record struct" : "struct",
-            TypeKind.Interface => "interface",
-            TypeKind.Enum => "enum",
-            _ => "class",
-        });
+        parts.Add(
+            type.TypeKind switch
+            {
+                TypeKind.Class => type.IsRecord ? "record" : "class",
+                TypeKind.Struct => type.IsRecord ? "record struct" : "struct",
+                TypeKind.Interface => "interface",
+                TypeKind.Enum => "enum",
+                _ => "class",
+            }
+        );
 
         parts.Add(type.Name + TypeParameterList(type));
         return string.Join(" ", parts);
@@ -223,29 +289,36 @@ public static class CsSigWriter
     private static string DelegateDeclaration(INamedTypeSymbol type)
     {
         var invoke = type.DelegateInvokeMethod!;
-        var @return = (invoke.ReturnsByRef ? "ref " : invoke.ReturnsByRefReadonly ? "ref readonly " : string.Empty)
-            + invoke.ReturnType.ToDisplayString(s_typeFormat);
+        var @return =
+            (
+                invoke.ReturnsByRef ? "ref "
+                : invoke.ReturnsByRefReadonly ? "ref readonly "
+                : string.Empty
+            ) + invoke.ReturnType.ToDisplayString(s_typeFormat);
         return $"{Accessibility(type.DeclaredAccessibility)} delegate {@return} "
             + $"{type.Name}{TypeParameterList(type)}({FormatParameters(invoke.Parameters)})";
     }
 
-    private static string TypeParameterList(INamedTypeSymbol type)
-        => type.TypeParameters.IsEmpty
+    private static string TypeParameterList(INamedTypeSymbol type) =>
+        type.TypeParameters.IsEmpty
             ? string.Empty
             : "<" + string.Join(", ", type.TypeParameters.Select(p => p.Name)) + ">";
 
-    private static string FormatParameters(IEnumerable<IParameterSymbol> parameters)
-        => string.Join(", ", parameters.Select(p =>
-        {
-            var prefix = p.RefKind switch
+    private static string FormatParameters(IEnumerable<IParameterSymbol> parameters) =>
+        string.Join(
+            ", ",
+            parameters.Select(p =>
             {
-                RefKind.Ref => "ref ",
-                RefKind.Out => "out ",
-                RefKind.In => "in ",
-                _ => string.Empty,
-            };
-            return prefix + p.Type.ToDisplayString(s_typeFormat) + " " + p.Name;
-        }));
+                var prefix = p.RefKind switch
+                {
+                    RefKind.Ref => "ref ",
+                    RefKind.Out => "out ",
+                    RefKind.In => "in ",
+                    _ => string.Empty,
+                };
+                return prefix + p.Type.ToDisplayString(s_typeFormat) + " " + p.Name;
+            })
+        );
 
     /// <summary>The members of <paramref name="type"/> that should appear in the signature file:
     /// explicitly declared, externally visible non-type members, excluding accessors (emitted via
@@ -259,11 +332,15 @@ public static class CsSigWriter
                 continue;
             }
 
-            if (member is IMethodSymbol
+            if (
+                member is IMethodSymbol
                 {
-                    MethodKind: MethodKind.PropertyGet or MethodKind.PropertySet
-                        or MethodKind.EventAdd or MethodKind.EventRemove,
-                })
+                    MethodKind: MethodKind.PropertyGet
+                        or MethodKind.PropertySet
+                        or MethodKind.EventAdd
+                        or MethodKind.EventRemove,
+                }
+            )
             {
                 continue;
             }
@@ -275,14 +352,15 @@ public static class CsSigWriter
         }
     }
 
-    private static bool IsVisible(ISymbol member) => member switch
-    {
-        // Properties are tracked through their accessors; emit the property if either surfaces.
-        IPropertySymbol property =>
-            (property.GetMethod is { } getter && ApiSurface.IsTrackedApi(getter))
-            || (property.SetMethod is { } setter && ApiSurface.IsTrackedApi(setter)),
-        _ => ApiSurface.IsTrackedApi(member),
-    };
+    private static bool IsVisible(ISymbol member) =>
+        member switch
+        {
+            // Properties are tracked through their accessors; emit the property if either surfaces.
+            IPropertySymbol property => (
+                property.GetMethod is { } getter && ApiSurface.IsTrackedApi(getter)
+            ) || (property.SetMethod is { } setter && ApiSurface.IsTrackedApi(setter)),
+            _ => ApiSurface.IsTrackedApi(member),
+        };
 
     private static IEnumerable<INamedTypeSymbol> TopLevelTypes(INamespaceSymbol root)
     {
@@ -305,8 +383,9 @@ public static class CsSigWriter
         }
     }
 
-    private static IEnumerable<T> Sorted<T>(IEnumerable<T> symbols) where T : ISymbol
-        => symbols.OrderBy(s => s.ToDisplayString(s_memberFormat), StringComparer.Ordinal);
+    private static IEnumerable<T> Sorted<T>(IEnumerable<T> symbols)
+        where T : ISymbol =>
+        symbols.OrderBy(s => s.ToDisplayString(s_memberFormat), StringComparer.Ordinal);
 
     /// <summary>
     /// A stable identity for a <em>top-level</em> type — its namespace-qualified name plus generic
@@ -316,22 +395,25 @@ public static class CsSigWriter
     /// </summary>
     public static string TopLevelKey(INamedTypeSymbol type)
     {
-        var ns = type.ContainingNamespace is { IsGlobalNamespace: false } n ? n.ToDisplayString() + "." : string.Empty;
+        var ns = type.ContainingNamespace is { IsGlobalNamespace: false } n
+            ? n.ToDisplayString() + "."
+            : string.Empty;
         var name = type.Arity > 0 ? type.Name + "`" + type.Arity : type.Name;
         return ns + name;
     }
 
-    private static string Accessibility(Accessibility accessibility) => accessibility switch
-    {
-        Microsoft.CodeAnalysis.Accessibility.Public => "public",
-        Microsoft.CodeAnalysis.Accessibility.Protected => "protected",
-        Microsoft.CodeAnalysis.Accessibility.ProtectedOrInternal => "protected internal",
-        Microsoft.CodeAnalysis.Accessibility.ProtectedAndInternal => "private protected",
-        Microsoft.CodeAnalysis.Accessibility.Internal => "internal",
-        Microsoft.CodeAnalysis.Accessibility.Private => "private",
-        _ => "internal",
-    };
+    private static string Accessibility(Accessibility accessibility) =>
+        accessibility switch
+        {
+            Microsoft.CodeAnalysis.Accessibility.Public => "public",
+            Microsoft.CodeAnalysis.Accessibility.Protected => "protected",
+            Microsoft.CodeAnalysis.Accessibility.ProtectedOrInternal => "protected internal",
+            Microsoft.CodeAnalysis.Accessibility.ProtectedAndInternal => "private protected",
+            Microsoft.CodeAnalysis.Accessibility.Internal => "internal",
+            Microsoft.CodeAnalysis.Accessibility.Private => "private",
+            _ => "internal",
+        };
 
-    private static string FormatConstant(object? value)
-        => value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";
+    private static string FormatConstant(object? value) =>
+        value is null ? "null" : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";
 }

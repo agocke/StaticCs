@@ -5,11 +5,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.Testing.Verifiers;
 
 namespace StaticCs.Tests;
 
-internal class SuppressorTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, XUnitVerifier>
+internal class SuppressorTest<TAnalyzer> : CSharpAnalyzerTest<TAnalyzer, DefaultVerifier>
     where TAnalyzer : DiagnosticAnalyzer, new()
 {
     public CSharpCompilationOptions CompilationOptions { get; private init; } =

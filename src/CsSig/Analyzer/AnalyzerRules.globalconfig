@@ -1,0 +1,13 @@
+is_global = true
+
+# RS1035: 'Environment' is banned for use by analyzers. The only use is Environment.NewLine inside
+# the third-party StaticCS.IndentingBuilder source package, which is compiled into this assembly and
+# cannot be modified here. The .cssig writer normalises line endings through the host, so this does
+# not affect determinism of the analyzer's diagnostics.
+dotnet_diagnostic.RS1035.severity = none
+
+# RS1037: suggests adding the "CompilationEnd" custom tag to descriptors reported from the
+# compilation action. These diagnostics are intentionally whole-compilation (the public surface can
+# only be compared once every symbol is known); the tag is an optimisation hint that is orthogonal
+# to this change.
+dotnet_diagnostic.RS1037.severity = none
