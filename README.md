@@ -61,3 +61,10 @@ int SuitsToInt(CardSuit suit) => switch {
 https://www.nuget.org/packages/StaticCS.Async
 
 A library for structured concurrency in C#. See [the Async README.md](src/Async/README.md) for more info.
+
+### StaticCS.CsSig
+
+An analyzer that pins a project's public API surface using `.cssig` files — ordinary C# member
+declarations with no bodies. The analyzer enforces that the project's public API exactly matches the
+declared signatures, in both directions (like the Roslyn Public API analyzer, but using real C#
+instead of a flat text format). See [the CsSig README.md](src/CsSig/README.md) for more info.

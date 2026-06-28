@@ -1,0 +1,229 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "C# Signature",
+    "scopeName": "source.cssig",
+    "patterns": [
+        {
+            "include": "#comment"
+        },
+        {
+            "include": "#directive"
+        },
+        {
+            "include": "#attribute"
+        },
+        {
+            "include": "#namespace"
+        },
+        {
+            "include": "#type-declaration"
+        },
+        {
+            "include": "#keyword"
+        },
+        {
+            "include": "#storage-type"
+        },
+        {
+            "include": "#string"
+        },
+        {
+            "include": "#char"
+        },
+        {
+            "include": "#number"
+        },
+        {
+            "include": "#punctuation"
+        },
+        {
+            "include": "#identifier"
+        }
+    ],
+    "repository": {
+        "comment": {
+            "patterns": [
+                {
+                    "name": "comment.block.documentation.cssig",
+                    "begin": "///",
+                    "end": "$"
+                },
+                {
+                    "name": "comment.line.double-slash.cssig",
+                    "begin": "//",
+                    "end": "$"
+                },
+                {
+                    "name": "comment.block.cssig",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "directive": {
+            "name": "meta.preprocessor.cssig",
+            "begin": "^\\s*#\\s*(nullable|define|undef|if|elif|else|endif|region|endregion|pragma|warning|error|line)\\b",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.control.directive.cssig"
+                }
+            },
+            "end": "$"
+        },
+        "attribute": {
+            "name": "meta.attribute.cssig",
+            "begin": "(\\[)(?=\\s*[A-Za-z_])",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.section.attribute.begin.cssig"
+                }
+            },
+            "end": "(\\])",
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.section.attribute.end.cssig"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "match": "[A-Za-z_][A-Za-z0-9_]*(?:\\s*\\.\\s*[A-Za-z_][A-Za-z0-9_]*)*",
+                    "name": "entity.name.type.attribute.cssig"
+                },
+                {
+                    "include": "#string"
+                },
+                {
+                    "include": "#number"
+                },
+                {
+                    "include": "#punctuation"
+                }
+            ]
+        },
+        "namespace": {
+            "match": "\\b(namespace)\\s+([A-Za-z_][A-Za-z0-9_]*(?:\\s*\\.\\s*[A-Za-z_][A-Za-z0-9_]*)*)",
+            "captures": {
+                "1": {
+                    "name": "keyword.other.namespace.cssig"
+                },
+                "2": {
+                    "name": "entity.name.type.namespace.cssig"
+                }
+            }
+        },
+        "type-declaration": {
+            "match": "\\b(class|struct|interface|enum|record|delegate)\\b(?:\\s+(class|struct))?\\s+([A-Za-z_][A-Za-z0-9_]*)",
+            "captures": {
+                "1": {
+                    "name": "keyword.other.cssig storage.type.cssig"
+                },
+                "2": {
+                    "name": "keyword.other.cssig storage.type.cssig"
+                },
+                "3": {
+                    "name": "entity.name.type.cssig"
+                }
+            }
+        },
+        "keyword": {
+            "patterns": [
+                {
+                    "name": "storage.modifier.cssig",
+                    "match": "\\b(public|private|protected|internal|static|abstract|sealed|virtual|override|readonly|const|extern|partial|new|unsafe|volatile|async|required|file|in|out|ref|params)\\b"
+                },
+                {
+                    "name": "keyword.other.cssig",
+                    "match": "\\b(using|namespace|class|struct|interface|enum|record|delegate|event|where|operator|implicit|explicit|get|set|init|add|remove|this|base|global|nameof|typeof|default)\\b"
+                }
+            ]
+        },
+        "storage-type": {
+            "name": "storage.type.builtin.cssig keyword.type.cssig",
+            "match": "\\b(void|bool|byte|sbyte|char|decimal|double|float|int|uint|long|ulong|short|ushort|string|object|nint|nuint|dynamic|var)\\b"
+        },
+        "string": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.verbatim.cssig",
+                    "begin": "@\"",
+                    "end": "\"(?!\")",
+                    "patterns": [
+                        {
+                            "match": "\"\"",
+                            "name": "constant.character.escape.cssig"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.cssig",
+                    "begin": "\\$?\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.cssig",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "char": {
+            "name": "string.quoted.single.cssig",
+            "begin": "'",
+            "end": "'",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.cssig",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "number": {
+            "name": "constant.numeric.cssig",
+            "match": "\\b(0[xX][0-9a-fA-F_]+|0[bB][01_]+|[0-9_]+(\\.[0-9_]+)?([eE][+-]?[0-9_]+)?)([uUlLfFdDmM]{0,2})\\b"
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "name": "punctuation.terminator.statement.cssig",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.separator.cssig",
+                    "match": "[,.:]"
+                },
+                {
+                    "name": "punctuation.section.brackets.cssig",
+                    "match": "[\\[\\]{}()]"
+                },
+                {
+                    "name": "keyword.operator.cssig",
+                    "match": "[<>=&|+\\-*/%!?~]"
+                }
+            ]
+        },
+        "identifier": {
+            "patterns": [
+                {
+                    "match": "([A-Za-z_][A-Za-z0-9_]*)\\s*(?=<|\\()",
+                    "captures": {
+                        "1": {
+                            "name": "entity.name.function.cssig"
+                        }
+                    }
+                },
+                {
+                    "match": "\\b([A-Z][A-Za-z0-9_]*)\\b",
+                    "name": "entity.name.type.cssig"
+                },
+                {
+                    "name": "variable.other.cssig",
+                    "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+                }
+            ]
+        }
+    }
+}

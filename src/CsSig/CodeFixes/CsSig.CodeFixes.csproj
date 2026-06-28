@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>CsSig.CodeFixes</AssemblyName>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <!--
+    This project produces the StaticCS.CsSig NuGet package. It is the leaf of the analyzer ->
+    code-fix dependency chain, so it can pack every assembly the package ships (the analyzer, the
+    code fixes, and IndentingBuilder) without creating a project-reference cycle.
+  -->
+  <PropertyGroup>
+    <PackageId>StaticCS.CsSig</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>agocke</Authors>
+    <IsPackable>true</IsPackable>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/agocke/static-cs</RepositoryUrl>
+    <Description>An analyzer that checks a project's public API surface against C# signature (.cssig) files, with a code fix that generates them.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.0.0" PrivateAssets="all" />
+    <ProjectReference Include="../Analyzer/CsSig.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    Ship the analyzer and the code fixes side by side under analyzers/dotnet/cs. Their shared helper
+    (IndentingBuilder) is a source-only package compiled into CsSig.Analyzers.dll, so it needs no
+    separate assembly. The host (the IDE / compiler) supplies the Microsoft.CodeAnalysis.* assemblies.
+  -->
+  <ItemGroup>
+    <None Include="$(OutputPath)/CsSig.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(OutputPath)/CsSig.CodeFixes.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="../Analyzer/build/StaticCS.CsSig.props" Pack="true" PackagePath="build/StaticCS.CsSig.props" />
+    <None Include="../Analyzer/README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>
