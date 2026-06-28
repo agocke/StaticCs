@@ -407,19 +407,14 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
         => (parameter.IsParams ? ParamModifiers.Params : ParamModifiers.None)
             | (parameter.IsThis ? ParamModifiers.This : ParamModifiers.None)
             | (parameter.HasExplicitDefaultValue ? ParamModifiers.Optional : ParamModifiers.None)
-            | (parameter.RefKind == RefReadOnlyParameter ? ParamModifiers.RefReadOnly : ParamModifiers.None);
-
-    // RefKind.RefReadOnlyParameter (C# 12) is not defined in the Roslyn baseline this analyzer
-    // compiles against, but the host compiler reports it at runtime. Reference it by its numeric
-    // value so the analyzer keeps targeting the older Roslyn version.
-    private const RefKind RefReadOnlyParameter = (RefKind)4;
+            | (parameter.RefKind == RefKind.RefReadOnlyParameter ? ParamModifiers.RefReadOnly : ParamModifiers.None);
 
     // `in` and `ref readonly` parameters share the same binary calling convention (both an
     // `in`-flagged byref with a `modreq(InAttribute)`); `ref readonly` only adds a source-level
     // `RequiresLocationAttribute`. Identity therefore pairs them, and the source difference is
     // carried by ParamModifiers.RefReadOnly so it surfaces as a source-only modification.
     private static RefKind BinaryRefKind(RefKind refKind)
-        => refKind == RefReadOnlyParameter ? RefKind.In : refKind;
+        => refKind == RefKind.RefReadOnlyParameter ? RefKind.In : refKind;
 
     /// <summary>
     /// The identity contribution of an extension block: its receiver parameter, encoded as a single
