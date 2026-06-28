@@ -81,26 +81,26 @@ internal static class CsSigRecognizer
         /// Modifiers allowed on a virtualizable member (method, property, indexer, event): the
         /// comparison captures all of these as part of the member's virtuality.
         /// </summary>
-        private static readonly SyntaxKind[] s_memberModifiers =
-        {
+        private static ReadOnlySpan<SyntaxKind> MemberModifiers =>
+        [
             SyntaxKind.StaticKeyword,
             SyntaxKind.VirtualKeyword,
             SyntaxKind.AbstractKeyword,
             SyntaxKind.OverrideKeyword,
             SyntaxKind.SealedKeyword,
-        };
+        ];
 
         // Members that can be 'readonly' on a struct (the modifier makes the member readonly,
         // turning `this` into an `in` parameter — observable in both source and binary).
-        private static readonly SyntaxKind[] s_readonlyMemberModifiers =
-        {
+        private static ReadOnlySpan<SyntaxKind> ReadonlyMemberModifiers =>
+        [
             SyntaxKind.StaticKeyword,
             SyntaxKind.VirtualKeyword,
             SyntaxKind.AbstractKeyword,
             SyntaxKind.OverrideKeyword,
             SyntaxKind.SealedKeyword,
             SyntaxKind.ReadOnlyKeyword,
-        };
+        ];
 
         /// <summary>
         /// Rejects every modifier that is not accessibility (always allowed, since it determines
@@ -234,7 +234,7 @@ internal static class CsSigRecognizer
         {
             // 'readonly' is allowed: on a struct instance method it marks the method readonly,
             // making `this` an `in` parameter (observable in both source and binary).
-            CheckModifiers(node.Modifiers, s_readonlyMemberModifiers);
+            CheckModifiers(node.Modifiers, ReadonlyMemberModifiers);
             RejectBody(node.Body, node.ExpressionBody);
             base.VisitMethodDeclaration(node);
         }
@@ -271,27 +271,27 @@ internal static class CsSigRecognizer
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
-            CheckModifiers(node.Modifiers, s_readonlyMemberModifiers);
+            CheckModifiers(node.Modifiers, ReadonlyMemberModifiers);
             RejectBody(body: null, node.ExpressionBody);
             base.VisitPropertyDeclaration(node);
         }
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
-            CheckModifiers(node.Modifiers, s_readonlyMemberModifiers);
+            CheckModifiers(node.Modifiers, ReadonlyMemberModifiers);
             RejectBody(body: null, node.ExpressionBody);
             base.VisitIndexerDeclaration(node);
         }
 
         public override void VisitEventDeclaration(EventDeclarationSyntax node)
         {
-            CheckModifiers(node.Modifiers, s_memberModifiers);
+            CheckModifiers(node.Modifiers, MemberModifiers);
             base.VisitEventDeclaration(node);
         }
 
         public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
         {
-            CheckModifiers(node.Modifiers, s_memberModifiers);
+            CheckModifiers(node.Modifiers, MemberModifiers);
             base.VisitEventFieldDeclaration(node);
         }
 
