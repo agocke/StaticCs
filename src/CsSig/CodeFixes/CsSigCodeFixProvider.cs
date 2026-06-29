@@ -15,7 +15,8 @@ using Microsoft.CodeAnalysis.Text;
 namespace CsSig;
 
 /// <summary>
-/// Offers a fix for <c>CSSIG002</c> (a public member missing from the <c>.cssig</c> files) that
+/// Offers a fix for <c>CSSIG002</c> (a public member missing from the <c>.cssig</c> files) and
+/// <c>CSSIG005</c> (a declared signature that no longer matches the project's public API) that
 /// (re)generates a signature file from the project's current public API via <see cref="CsSigWriter"/>.
 /// </summary>
 /// <remarks>
@@ -43,7 +44,10 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
     public const string ToTypeFileKey = "CsSig.AddToTypeFile";
 
     public override ImmutableArray<string> FixableDiagnosticIds { get; } =
-        ImmutableArray.Create(DiagId.MissingFromSignature.ToIdString());
+        ImmutableArray.Create(
+            DiagId.MissingFromSignature.ToIdString(),
+            DiagId.SignatureMismatch.ToIdString()
+        );
 
     public override FixAllProvider GetFixAllProvider() => CsSigFixAllProvider.Instance;
 
@@ -94,7 +98,7 @@ public sealed class CsSigCodeFixProvider : CodeFixProvider
             // The type is already declared in a .cssig file: regenerate that file.
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    $"Add missing API to '{owner.Name}'",
+                    $"Update '{owner.Name}' to match project API",
                     ct => RegenerateOwningFileAsync(project, owner, index, key, ct),
                     equivalenceKey: ToPublicApiKey
                 ),
