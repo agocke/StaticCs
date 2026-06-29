@@ -61,8 +61,11 @@ protected` are rejected (`CSSIG004`) — they cannot appear on any member, acces
 | enum member                                | (none)                           | n/a              | an explicit `= value` is allowed and is part of the signature   |
 
 `virtual` / `abstract` / `override` / `sealed` on a member are captured as its *virtuality* and
-affect both equivalences (see below). Interface members are implicitly `abstract`, so the modifier
-need not be written there.
+affect both equivalences (see below). An instance interface member is implicitly `abstract`, so that
+modifier need not be written there; a member with a default implementation is `virtual` and must be
+written `virtual` to distinguish it (removing a default implementation re-breaks every implementer).
+A `static abstract` interface member must spell out `abstract`, since `static` members are not
+implicitly abstract.
 
 ### No bodies
 

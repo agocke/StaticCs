@@ -491,24 +491,10 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
             | (symbol.IsOverride ? MemberFlags.Override : MemberFlags.None)
             | (symbol.IsSealed ? MemberFlags.Sealed : MemberFlags.None);
 
-        // A body-less .cssig cannot tell an abstract interface member apart from a default-
-        // implemented (virtual) one: the body is the only difference, and signatures carry no
-        // bodies. The same applies to `static abstract` vs `static virtual` members. So the
-        // virtuality of an interface's own members is unobservable through this format — normalize
-        // it away (keeping static-ness) so the written form and the original symbol compare equal.
-        if (
-            symbol is
-            { Kind: not SymbolKind.NamedType, ContainingType.TypeKind: TypeKind.Interface }
-        )
-        {
-            flags &= ~(
-                MemberFlags.Virtual
-                | MemberFlags.Abstract
-                | MemberFlags.Override
-                | MemberFlags.Sealed
-            );
-        }
-
+        // An interface's own members carry their virtuality: an abstract member (no default
+        // implementation) and a virtual one (with a default implementation) are different breaking-
+        // change shapes — removing a default implementation re-breaks every implementer. The writer
+        // emits a default implementation as `virtual`, so the distinction survives the round trip.
         return flags;
     }
 
