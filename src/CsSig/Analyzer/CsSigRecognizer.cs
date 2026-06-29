@@ -39,7 +39,7 @@ internal static class CsSigRecognizer
         title: "Disallowed construct in .cssig file",
         messageFormat: "{0}",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 

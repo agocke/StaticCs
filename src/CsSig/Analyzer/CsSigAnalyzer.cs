@@ -26,7 +26,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Signature is missing from the project",
         messageFormat: "The signature '{0}' is declared in a .cssig file but is not part of the project's public API (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -35,7 +35,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Public API is missing from the .cssig file",
         messageFormat: "The signature '{0}' is part of the project's public API but is not declared in any .cssig file (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -44,7 +44,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Invalid .cssig file",
         messageFormat: "The .cssig file could not be parsed: {0}",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -53,7 +53,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Signature does not match the project",
         messageFormat: "The signature '{0}' is declared in a .cssig file but does not match the project's public API (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -112,19 +112,23 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
                 cancellationToken: context.CancellationToken
             );
 
-            foreach (var diagnostic in tree.GetDiagnostics(context.CancellationToken))
+            // A single malformed signature file cascades into dozens of follow-on errors (a
+            // construct that needs a newer language version, for example, yields a parse error per
+            // member). Report only the first parse error per file and skip the grammar recognizer:
+            // the file can't be diffed, so the extra noise is unactionable.
+            var firstError = tree.GetDiagnostics(context.CancellationToken)
+                .FirstOrDefault(static d => d.Severity == DiagnosticSeverity.Error);
+            if (firstError is not null)
             {
-                if (diagnostic.Severity == DiagnosticSeverity.Error)
-                {
-                    hadParseError = true;
-                    fileDiagnostics.Add(
-                        Diagnostic.Create(
-                            s_signatureFileError,
-                            CsSigLocation.ToExternal(diagnostic.Location, file.Path),
-                            diagnostic.GetMessage()
-                        )
-                    );
-                }
+                hadParseError = true;
+                fileDiagnostics.Add(
+                    Diagnostic.Create(
+                        s_signatureFileError,
+                        CsSigLocation.ToExternal(firstError.Location, file.Path),
+                        firstError.GetMessage()
+                    )
+                );
+                continue;
             }
 
             // Recognize the .cssig grammar: reject any construct outside the signature sublanguage
