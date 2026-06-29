@@ -14,7 +14,7 @@
   -->
   <PropertyGroup>
     <PackageId>StaticCS.CsSig</PackageId>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <Authors>agocke</Authors>
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>

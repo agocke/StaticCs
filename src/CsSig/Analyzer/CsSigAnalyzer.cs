@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -69,10 +70,10 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
     {
         context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-        context.RegisterCompilationAction(AnalyzeCompilation);
+        context.RegisterCompilationStartAction(OnCompilationStart);
     }
 
-    private static void AnalyzeCompilation(CompilationAnalysisContext context)
+    private static void OnCompilationStart(CompilationStartAnalysisContext context)
     {
         var compilation = context.Compilation;
 
@@ -94,6 +95,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             ?? CSharpParseOptions.Default;
 
         var sigTrees = new List<SyntaxTree>(sigFiles.Length);
+        var fileDiagnostics = new List<Diagnostic>();
         var hadParseError = false;
         foreach (var file in sigFiles)
         {
@@ -115,7 +117,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
                 if (diagnostic.Severity == DiagnosticSeverity.Error)
                 {
                     hadParseError = true;
-                    context.ReportDiagnostic(
+                    fileDiagnostics.Add(
                         Diagnostic.Create(
                             s_signatureFileError,
                             CsSigLocation.ToExternal(diagnostic.Location, file.Path),
@@ -130,7 +132,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
             // no model; the comparison model is derived from symbols below.
             foreach (var diagnostic in CsSigRecognizer.Recognize(tree, context.CancellationToken))
             {
-                context.ReportDiagnostic(diagnostic);
+                fileDiagnostics.Add(diagnostic);
             }
 
             sigTrees.Add(tree);
@@ -139,6 +141,13 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         // If a .cssig file is malformed we can't reliably diff; surface the parse errors only.
         if (hadParseError || sigTrees.Count == 0)
         {
+            context.RegisterCompilationEndAction(endContext =>
+            {
+                foreach (var diagnostic in fileDiagnostics)
+                {
+                    endContext.ReportDiagnostic(diagnostic);
+                }
+            });
             return;
         }
 
@@ -150,71 +159,94 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         );
 
         var declared = ApiSurface.Collect(sigCompilation.Assembly, isDeclaration: true);
-        var actual = ApiSurface.Collect(compilation.Assembly, isDeclaration: false);
-
         var mode = ReadEquivalence(context.Options);
+        var matched = new ConcurrentDictionary<MemberIdentity, byte>();
 
-        foreach (var pair in declared)
-        {
-            context.CancellationToken.ThrowIfCancellationRequested();
-
-            if (!actual.TryGetValue(pair.Key, out var actualEntry))
+        // Per-type analysis: diffing each project type against the declared surface anchors the
+        // "missing from signature" / "mismatch" diagnostics to the project's source files, so IDEs
+        // report them in open-files scope rather than only in full-solution scope.
+        context.RegisterSymbolAction(
+            symbolContext =>
             {
-                // Declared in a .cssig file but missing from the project. An add/remove breaks
-                // whichever equivalence is being enforced.
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        s_missingFromProject,
-                        CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
-                        pair.Value.Display,
-                        Describe(mode)
-                    )
+                var actual = ApiSurface.CollectType(
+                    (INamedTypeSymbol)symbolContext.Symbol,
+                    isDeclaration: false
                 );
-                continue;
+
+                foreach (var pair in actual)
+                {
+                    if (!declared.TryGetValue(pair.Key, out var declaredEntry))
+                    {
+                        // Part of the project's public API but not declared in any .cssig file.
+                        symbolContext.ReportDiagnostic(
+                            Diagnostic.Create(
+                                s_missingFromSignature,
+                                pair.Value.Location,
+                                pair.Value.Display,
+                                Describe(mode)
+                            )
+                        );
+                        continue;
+                    }
+
+                    matched[pair.Key] = 0;
+
+                    // Present on both sides: the identities match, so compare the equivalence
+                    // projections that are active. A common-aspect change differs in both views,
+                    // yielding a single diagnostic labelled with both equivalences.
+                    var sourceDiffers =
+                        (mode & Equivalence.Source) != 0
+                        && !Equals(declaredEntry.Member.Source, pair.Value.Member.Source);
+                    var binaryDiffers =
+                        (mode & Equivalence.Binary) != 0
+                        && !Equals(declaredEntry.Member.Binary, pair.Value.Member.Binary);
+
+                    if (sourceDiffers || binaryDiffers)
+                    {
+                        symbolContext.ReportDiagnostic(
+                            Diagnostic.Create(
+                                s_signatureMismatch,
+                                pair.Value.Location,
+                                declaredEntry.Display,
+                                Describe(
+                                    (sourceDiffers ? Equivalence.Source : 0)
+                                        | (binaryDiffers ? Equivalence.Binary : 0)
+                                )
+                            )
+                        );
+                    }
+                }
+            },
+            SymbolKind.NamedType
+        );
+
+        // Declared in a .cssig file but never matched by the project: surface the parse/recognizer
+        // diagnostics and "missing from project". These anchor in the .cssig files.
+        context.RegisterCompilationEndAction(endContext =>
+        {
+            foreach (var diagnostic in fileDiagnostics)
+            {
+                endContext.ReportDiagnostic(diagnostic);
             }
 
-            // Present on both sides: the identities match, so compare the equivalence projections
-            // that are active. A common-aspect change differs in both views, yielding a single
-            // diagnostic labelled with both equivalences.
-            var sourceDiffers =
-                (mode & Equivalence.Source) != 0
-                && !Equals(pair.Value.Member.Source, actualEntry.Member.Source);
-            var binaryDiffers =
-                (mode & Equivalence.Binary) != 0
-                && !Equals(pair.Value.Member.Binary, actualEntry.Member.Binary);
-
-            if (sourceDiffers || binaryDiffers)
+            foreach (var pair in declared)
             {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        s_signatureMismatch,
-                        CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
-                        pair.Value.Display,
-                        Describe(
-                            (sourceDiffers ? Equivalence.Source : 0)
-                                | (binaryDiffers ? Equivalence.Binary : 0)
+                endContext.CancellationToken.ThrowIfCancellationRequested();
+                if (!matched.ContainsKey(pair.Key))
+                {
+                    // Declared in a .cssig file but missing from the project. An add/remove breaks
+                    // whichever equivalence is being enforced.
+                    endContext.ReportDiagnostic(
+                        Diagnostic.Create(
+                            s_missingFromProject,
+                            CsSigLocation.ToExternal(pair.Value.Location, sigFiles[0].Path),
+                            pair.Value.Display,
+                            Describe(mode)
                         )
-                    )
-                );
+                    );
+                }
             }
-        }
-
-        // Part of the project's public API but not declared in any .cssig file.
-        foreach (var pair in actual)
-        {
-            context.CancellationToken.ThrowIfCancellationRequested();
-            if (!declared.ContainsKey(pair.Key))
-            {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        s_missingFromSignature,
-                        pair.Value.Location,
-                        pair.Value.Display,
-                        Describe(mode)
-                    )
-                );
-            }
-        }
+        });
     }
 
     /// <summary>
