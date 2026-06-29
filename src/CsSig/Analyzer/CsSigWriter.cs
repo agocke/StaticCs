@@ -289,16 +289,46 @@ public static class CsSigWriter
             .Replace("volatile ", string.Empty)
             .Replace("required ", string.Empty);
 
-        // Roslyn's SymbolDisplay suppresses every modifier (including `static`) on interface
-        // members, treating them all as implicit. `static` is observable and representable, so put
-        // it back; the remaining virtuality modifiers are intentionally not tracked for interface
-        // members (a body-less signature cannot express default implementations — see FlagsFrom).
-        if (
-            member is { IsStatic: true, ContainingType.TypeKind: TypeKind.Interface }
-            && !text.StartsWith("static ", StringComparison.Ordinal)
-        )
+        // Roslyn's SymbolDisplay suppresses every modifier on interface members, treating them all
+        // as implicit. The observable ones (`static`, and the virtuality bits that distinguish an
+        // abstract member from a default-implemented one — see FlagsFrom) are representable, so put
+        // them back. `abstract` is the implicit default and is left off; a default implementation
+        // surfaces as `virtual`. A body-less `virtual` member is a semantic error in plain C# but
+        // parses fine, exactly like a body-less `int M();`.
+        if (member is { ContainingType.TypeKind: TypeKind.Interface })
         {
-            text = "static " + text;
+            var modifiers = new List<string>();
+            if (member.IsStatic)
+            {
+                modifiers.Add("static");
+            }
+
+            // Instance interface members are implicitly abstract, but static ones are not, so the
+            // `abstract` keyword must be written for a static abstract member to round-trip.
+            if (member.IsStatic && member.IsAbstract)
+            {
+                modifiers.Add("abstract");
+            }
+
+            if (member.IsVirtual)
+            {
+                modifiers.Add("virtual");
+            }
+
+            if (member.IsSealed)
+            {
+                modifiers.Add("sealed");
+            }
+
+            if (member.IsOverride)
+            {
+                modifiers.Add("override");
+            }
+
+            if (modifiers.Count > 0)
+            {
+                text = string.Join(" ", modifiers) + " " + text;
+            }
         }
 
         // ShowReadWriteDescriptor already renders the `{ get; set; }` body for properties/indexers,

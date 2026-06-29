@@ -766,9 +766,10 @@ public class CsSigTests
     [Fact]
     public async Task RoundTripDefaultInterfaceMethods()
     {
-        // A default interface method (one with a body) is `virtual`, whereas the body-less form
-        // written to a .cssig is `abstract`. The two must compare equal: a signature file cannot
-        // carry a body, so it cannot distinguish the two.
+        // A default interface method (one with a body) is `virtual`; an abstract member is body-
+        // less. The .cssig cannot carry a body, so the writer emits a default implementation as
+        // `virtual` to preserve the distinction. Round-tripping must keep abstract and virtual
+        // members distinct rather than collapsing them.
         await AssertRoundTripsAsync(
             """
             namespace N
@@ -1191,8 +1192,8 @@ public class CsSigTests
     [Fact]
     public async Task InterfaceMemberStaticnessStillReported()
     {
-        // FlagsFrom normalizes virtuality away for interface members but keeps static-ness, so a
-        // static-vs-instance mismatch must still be reported.
+        // Interface members carry their virtuality (abstract vs default-implemented), but a
+        // static-vs-instance mismatch is still reported on top of that.
         var source = """
             namespace N;
             public interface IThing
@@ -1205,6 +1206,29 @@ public class CsSigTests
             public interface IThing
             {
                 int M();
+            }
+            """;
+        var diagnostic = Assert.Single(await RunPreviewAsync(source, sig));
+        Assert.Equal("CSSIG005", diagnostic.Id);
+    }
+
+    [Fact]
+    public async Task InterfaceDefaultImplementationRemovalReported()
+    {
+        // Removing a default implementation (virtual -> abstract) re-breaks every implementer, so a
+        // .cssig that still promises the default must mismatch the now-abstract source member.
+        var source = """
+            namespace N;
+            public interface IThing
+            {
+                int M();
+            }
+            """;
+        var sig = """
+            namespace N;
+            public interface IThing
+            {
+                virtual int M();
             }
             """;
         var diagnostic = Assert.Single(await RunPreviewAsync(source, sig));
