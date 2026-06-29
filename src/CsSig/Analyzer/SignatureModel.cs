@@ -319,17 +319,20 @@ internal abstract record SourceMember
 {
     private SourceMember() { }
 
-    public sealed record Type(CommonTypeAspects Common) : SourceMember;
+    public sealed record Type(CommonTypeAspects Common, bool Obsolete) : SourceMember;
 
     public sealed record Method(
         CommonMethodAspects Common,
         Nullability ReturnNullability,
-        EqArray<SourceParam> Parameters
+        EqArray<SourceParam> Parameters,
+        bool Obsolete
     ) : SourceMember;
 
-    public sealed record Field(CommonFieldAspects Common, Nullability Nullability) : SourceMember;
+    public sealed record Field(CommonFieldAspects Common, Nullability Nullability, bool Obsolete)
+        : SourceMember;
 
-    public sealed record Event(CommonEventAspects Common, Nullability Nullability) : SourceMember;
+    public sealed record Event(CommonEventAspects Common, Nullability Nullability, bool Obsolete)
+        : SourceMember;
 }
 
 /// <summary>
@@ -371,6 +374,7 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
         // symbol: types expose IsAbstract/IsSealed, members expose virtuality, and the rest are
         // false for kinds they do not apply to.
         var flags = FlagsFrom(symbol);
+        var obsolete = IsObsolete(symbol);
 
         switch (symbol)
         {
@@ -392,7 +396,7 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
                 var common = new CommonTypeAspects(flags);
                 return new ApiMember(
                     identity,
-                    new SourceMember.Type(common),
+                    new SourceMember.Type(common, obsolete),
                     new BinaryMember.Type(common)
                 );
             }
@@ -426,7 +430,12 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
                 );
                 return new ApiMember(
                     identity,
-                    new SourceMember.Method(common, Nullability.Of(method.ReturnType), parameters),
+                    new SourceMember.Method(
+                        common,
+                        Nullability.Of(method.ReturnType),
+                        parameters,
+                        obsolete
+                    ),
                     new BinaryMember.Method(common)
                 );
             }
@@ -448,7 +457,7 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
                 var constant = field.HasConstantValue ? FormatConstant(field.ConstantValue) : null;
                 return new ApiMember(
                     identity,
-                    new SourceMember.Field(common, Nullability.Of(field.Type)),
+                    new SourceMember.Field(common, Nullability.Of(field.Type), obsolete),
                     new BinaryMember.Field(common, constant)
                 );
             }
@@ -466,7 +475,7 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
                 var common = new CommonEventAspects(TypeRef.From(@event.Type), flags);
                 return new ApiMember(
                     identity,
-                    new SourceMember.Event(common, Nullability.Of(@event.Type)),
+                    new SourceMember.Event(common, Nullability.Of(@event.Type), obsolete),
                     new BinaryMember.Event(common)
                 );
             }
@@ -511,6 +520,14 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
 
         return flags;
     }
+
+    /// <summary><c>[Obsolete]</c> is observable in source (a deprecation diagnostic) but is erased
+    /// to an attribute in metadata, so it affects source equivalence only — carried by the source
+    /// projection alone, like nullability.</summary>
+    private static bool IsObsolete(ISymbol symbol) =>
+        symbol
+            .GetAttributes()
+            .Any(a => a.AttributeClass?.ToDisplayString() == "System.ObsoleteAttribute");
 
     private static ParamModifiers ParamModifiersFrom(IParameterSymbol parameter) =>
         (parameter.IsParams ? ParamModifiers.Params : ParamModifiers.None)
