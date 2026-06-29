@@ -8,6 +8,21 @@
       Include="**/*.cssig"
       Exclude="$(BaseIntermediateOutputPath)**/*.cssig;$(BaseOutputPath)**/*.cssig;bin/**/*.cssig;obj/**/*.cssig"
     />
+
+    <!--
+      Per-TFM signatures: a `<name>.<tfm>.cssig` file (e.g. PublicApi.net8.0.cssig) applies only
+      to that target framework. Drop every TFM-qualified file, then re-add the ones for the TFM
+      currently building, so multi-targeted projects can declare a distinct surface per TFM.
+    -->
+    <AdditionalFiles
+      Remove="**/*.net*.cssig;**/*.netstandard*.cssig;**/*.netcoreapp*.cssig"
+      Condition="'$(TargetFramework)' != ''"
+    />
+    <AdditionalFiles
+      Include="**/*.$(TargetFramework).cssig"
+      Exclude="$(BaseIntermediateOutputPath)**/*.cssig;$(BaseOutputPath)**/*.cssig;bin/**/*.cssig;obj/**/*.cssig"
+      Condition="'$(TargetFramework)' != ''"
+    />
   </ItemGroup>
 
   <!--

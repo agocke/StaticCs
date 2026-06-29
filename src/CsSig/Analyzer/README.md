@@ -33,6 +33,10 @@ All `*.cssig` files in the project are included automatically and together defin
 API surface. Set `<EnableCsSigAnalyzer>false</EnableCsSigAnalyzer>` to opt out. A project with no
 `.cssig` files enforces nothing.
 
+For multi-targeted projects, name a file `<name>.<tfm>.cssig` (e.g. `PublicApi.net8.0.cssig`) to
+apply it only when building that target framework. Unqualified files (e.g. `PublicApi.cssig`) apply
+to every TFM, so put the shared surface there and the TFM-specific surface in qualified files.
+
 You don't write the file by hand: create an empty `PublicApi.cssig`, build (every public member reports
 `CSSIG002`), then invoke the code fix → **Fix all** to generate it from the current surface. Apply
 the same fix to keep it current as the API grows.
