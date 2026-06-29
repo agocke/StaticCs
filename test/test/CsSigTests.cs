@@ -1046,6 +1046,28 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task ObsoleteAttributesAreEmittedAndRoundTrip()
+    {
+        var source = """
+            namespace N;
+            [System.Obsolete]
+            public class C
+            {
+                [System.Obsolete("use M2")]
+                public int M() => 0;
+                [System.Obsolete("gone", true)]
+                public int M2() => 0;
+            }
+            """;
+
+        var generated = await WriteAsync(source);
+        Assert.Contains("[System.Obsolete]", generated);
+        Assert.Contains("[System.Obsolete(\"use M2\")]", generated);
+        Assert.Contains("[System.Obsolete(\"gone\", true)]", generated);
+        await AssertRoundTripsAsync(source);
+    }
+
+    [Fact]
     public async Task RoundTripRecordWithExplicitAndExtraMembers()
     {
         // A positional record that also declares an explicitly-overriding positional property, an
@@ -1459,10 +1481,41 @@ public class CsSigTests
         var actions = await harness.RegisterFirstAsync();
 
         var single = Assert.Single(actions);
-        Assert.Equal("Add missing API to 'MyApi.cssig'", single.Title);
+        Assert.Equal("Update 'MyApi.cssig' to match project API", single.Title);
 
         var files = await CodeFixHarness.ApplyAsync(single, harness.ProjectId);
         Assert.Contains("public int Extra();", files["MyApi.cssig"]);
+        Assert.Empty(await RunAsync(source, files["MyApi.cssig"]));
+    }
+
+    [Fact]
+    public async Task CodeFixRegeneratesFileForSignatureMismatch()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                public long M() => 0;
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                public int M();
+            }
+            """;
+
+        // The declared signature returns int but the project returns long: CSSIG005. The fix
+        // regenerates the owning file so the declared member matches the project surface.
+        using var harness = await CodeFixHarness.CreateAsync(source, ("MyApi.cssig", sig));
+        var actions = await harness.RegisterFirstAsync("CSSIG005");
+
+        var single = Assert.Single(actions);
+        Assert.Equal("Update 'MyApi.cssig' to match project API", single.Title);
+
+        var files = await CodeFixHarness.ApplyAsync(single, harness.ProjectId);
+        Assert.Contains("public long M();", files["MyApi.cssig"]);
         Assert.Empty(await RunAsync(source, files["MyApi.cssig"]));
     }
 
@@ -1541,7 +1594,7 @@ public class CsSigTests
         var actions = await harness.RegisterFirstAsync();
 
         var single = Assert.Single(actions);
-        Assert.Equal("Add missing API to 'C.cssig'", single.Title);
+        Assert.Equal("Update 'C.cssig' to match project API", single.Title);
 
         var files = await CodeFixHarness.ApplyAsync(single, harness.ProjectId);
         Assert.Contains("public int M();", files["C.cssig"]);
@@ -1667,7 +1720,9 @@ public class CsSigTests
 
         private Project Project => _workspace.CurrentSolution.GetProject(ProjectId)!;
 
-        private async Task<ImmutableArray<Diagnostic>> MissingDiagnosticsAsync()
+        private async Task<ImmutableArray<Diagnostic>> MissingDiagnosticsAsync(
+            string id = "CSSIG002"
+        )
         {
             var project = Project;
             var compilation = (await project.GetCompilationAsync(CancellationToken.None))!;
@@ -1678,14 +1733,14 @@ public class CsSigTests
             var diagnostics = await withAnalyzers.GetAnalyzerDiagnosticsAsync(
                 CancellationToken.None
             );
-            return diagnostics.Where(d => d.Id == "CSSIG002").ToImmutableArray();
+            return diagnostics.Where(d => d.Id == id).ToImmutableArray();
         }
 
-        /// <summary>Registers fixes for the first CSSIG002 diagnostic and returns the offered actions
-        /// in registration order.</summary>
-        public async Task<ImmutableArray<CodeAction>> RegisterFirstAsync()
+        /// <summary>Registers fixes for the first <paramref name="id"/> diagnostic and returns the
+        /// offered actions in registration order.</summary>
+        public async Task<ImmutableArray<CodeAction>> RegisterFirstAsync(string id = "CSSIG002")
         {
-            var diagnostics = await MissingDiagnosticsAsync();
+            var diagnostics = await MissingDiagnosticsAsync(id);
             var trigger = diagnostics.First();
 
             var actions = ImmutableArray.CreateBuilder<CodeAction>();

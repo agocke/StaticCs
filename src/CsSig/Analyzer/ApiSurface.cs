@@ -67,7 +67,10 @@ internal static class ApiSurface
     /// Collects the tracked entries contributed by a single type (the type itself and its members),
     /// so per-symbol analysis can diff one type at a time against the declared surface.
     /// </summary>
-    public static Dictionary<MemberIdentity, ApiEntry> CollectType(INamedTypeSymbol type, bool isDeclaration)
+    public static Dictionary<MemberIdentity, ApiEntry> CollectType(
+        INamedTypeSymbol type,
+        bool isDeclaration
+    )
     {
         var map = new Dictionary<MemberIdentity, ApiEntry>();
         CollectInto(type, map, isDeclaration);
