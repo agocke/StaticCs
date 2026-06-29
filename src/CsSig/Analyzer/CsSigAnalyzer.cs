@@ -112,19 +112,23 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
                 cancellationToken: context.CancellationToken
             );
 
-            foreach (var diagnostic in tree.GetDiagnostics(context.CancellationToken))
+            // A single malformed signature file cascades into dozens of follow-on errors (a
+            // construct that needs a newer language version, for example, yields a parse error per
+            // member). Report only the first parse error per file and skip the grammar recognizer:
+            // the file can't be diffed, so the extra noise is unactionable.
+            var firstError = tree.GetDiagnostics(context.CancellationToken)
+                .FirstOrDefault(static d => d.Severity == DiagnosticSeverity.Error);
+            if (firstError is not null)
             {
-                if (diagnostic.Severity == DiagnosticSeverity.Error)
-                {
-                    hadParseError = true;
-                    fileDiagnostics.Add(
-                        Diagnostic.Create(
-                            s_signatureFileError,
-                            CsSigLocation.ToExternal(diagnostic.Location, file.Path),
-                            diagnostic.GetMessage()
-                        )
-                    );
-                }
+                hadParseError = true;
+                fileDiagnostics.Add(
+                    Diagnostic.Create(
+                        s_signatureFileError,
+                        CsSigLocation.ToExternal(firstError.Location, file.Path),
+                        firstError.GetMessage()
+                    )
+                );
+                continue;
             }
 
             // Recognize the .cssig grammar: reject any construct outside the signature sublanguage
