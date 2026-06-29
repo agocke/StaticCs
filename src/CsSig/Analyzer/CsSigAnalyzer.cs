@@ -26,7 +26,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Signature is missing from the project",
         messageFormat: "The signature '{0}' is declared in a .cssig file but is not part of the project's public API (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -35,7 +35,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Public API is missing from the .cssig file",
         messageFormat: "The signature '{0}' is part of the project's public API but is not declared in any .cssig file (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -44,7 +44,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Invalid .cssig file",
         messageFormat: "The .cssig file could not be parsed: {0}",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -53,7 +53,7 @@ public sealed class CsSigAnalyzer : DiagnosticAnalyzer
         title: "Signature does not match the project",
         messageFormat: "The signature '{0}' is declared in a .cssig file but does not match the project's public API (breaks {1} equivalence)",
         category: "CsSig",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
