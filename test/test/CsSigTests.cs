@@ -273,6 +273,28 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task MalformedSignatureFileReportsSingleParseErrorWithoutGrammarNoise()
+    {
+        // A wrong-target signature file (constructs that don't parse here) used to cascade into
+        // many CSSIG003/CSSIG004 errors. Collapse to a single parse error and suppress the grammar
+        // recognizer for that file, since it can't be diffed.
+        var source = """
+            namespace N;
+            public class C() { }
+            """;
+        var sig = """
+            namespace N;
+            public class C() {
+            public int A() { }
+            public int B() { }
+            public int D() { }
+            """;
+        var diagnostics = await RunAsync(source, sig);
+        Assert.Equal(1, diagnostics.Count(d => d.Id == "CSSIG003"));
+        Assert.DoesNotContain(diagnostics, d => d.Id == "CSSIG004");
+    }
+
+    [Fact]
     public async Task PartialInSignatureFileReported()
     {
         var source = """
