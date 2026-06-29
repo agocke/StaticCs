@@ -142,6 +142,7 @@ public static class CsSigWriter
 
     private static void WriteType(IndentingBuilder builder, INamedTypeSymbol type)
     {
+        WriteObsolete(builder, type);
         if (type.TypeKind == TypeKind.Delegate)
         {
             builder.AppendLine(DelegateDeclaration(type) + ";");
@@ -158,6 +159,7 @@ public static class CsSigWriter
                 var field in type.GetMembers().OfType<IFieldSymbol>().Where(f => f.HasConstantValue)
             )
             {
+                WriteObsolete(builder, field);
                 builder.AppendLine(FormatMember(field));
             }
         }
@@ -165,6 +167,7 @@ public static class CsSigWriter
         {
             foreach (var member in Sorted(VisibleMembers(type)))
             {
+                WriteObsolete(builder, member);
                 builder.AppendLine(FormatMember(member));
             }
 
@@ -206,6 +209,7 @@ public static class CsSigWriter
 
         foreach (var member in Sorted(VisibleMembers(extension)))
         {
+            WriteObsolete(builder, member);
             builder.AppendLine(FormatMember(member));
         }
 
@@ -240,6 +244,37 @@ public static class CsSigWriter
     /// <summary>Generates the body-less declaration text of a single member, exactly as it should
     /// appear inside a type in a <c>.cssig</c> file (no leading indentation, no trailing newline).
     /// Enum members are rendered as <c>Name = value,</c>.</summary>
+    /// <summary>Emits an <c>[System.Obsolete]</c> attribute for <paramref name="symbol"/> if it declares
+    /// one, preserving the message and the error flag so deprecation is carried into the signature.
+    /// </summary>
+    private static void WriteObsolete(IndentingBuilder builder, ISymbol symbol)
+    {
+        var obsolete = symbol
+            .GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "System.ObsoleteAttribute");
+        if (obsolete is null)
+        {
+            return;
+        }
+
+        var args = obsolete.ConstructorArguments;
+        var message = args.Length > 0 && args[0].Value is string m ? m : null;
+        var isError = args.Length > 1 && args[1].Value is true;
+
+        if (message is null)
+        {
+            builder.AppendLine("[System.Obsolete]");
+        }
+        else if (!isError)
+        {
+            builder.AppendLine($"[System.Obsolete(\"{message.Replace("\"", "\\\"")}\")]");
+        }
+        else
+        {
+            builder.AppendLine($"[System.Obsolete(\"{message.Replace("\"", "\\\"")}\", true)]");
+        }
+    }
+
     private static string FormatMember(ISymbol member)
     {
         if (member is IFieldSymbol { ContainingType.TypeKind: TypeKind.Enum } enumField)

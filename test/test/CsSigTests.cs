@@ -1046,6 +1046,28 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task ObsoleteAttributesAreEmittedAndRoundTrip()
+    {
+        var source = """
+            namespace N;
+            [System.Obsolete]
+            public class C
+            {
+                [System.Obsolete("use M2")]
+                public int M() => 0;
+                [System.Obsolete("gone", true)]
+                public int M2() => 0;
+            }
+            """;
+
+        var generated = await WriteAsync(source);
+        Assert.Contains("[System.Obsolete]", generated);
+        Assert.Contains("[System.Obsolete(\"use M2\")]", generated);
+        Assert.Contains("[System.Obsolete(\"gone\", true)]", generated);
+        await AssertRoundTripsAsync(source);
+    }
+
+    [Fact]
     public async Task RoundTripRecordWithExplicitAndExtraMembers()
     {
         // A positional record that also declares an explicitly-overriding positional property, an
