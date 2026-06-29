@@ -489,7 +489,6 @@ public static class CsSigWriter
     private static bool IsPositionalProperty(IPropertySymbol property) =>
         property.DeclaringSyntaxReferences.Any(static r => r.GetSyntax() is ParameterSyntax);
 
-
     private static bool IsVisible(ISymbol member) =>
         member switch
         {
@@ -518,7 +517,6 @@ public static class CsSigWriter
 
         return constructor is not null && IsVisible(constructor) ? constructor : null;
     }
-
 
     private static IEnumerable<INamedTypeSymbol> TopLevelTypes(INamespaceSymbol root)
     {

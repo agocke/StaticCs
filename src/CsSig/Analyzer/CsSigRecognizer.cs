@@ -82,32 +82,35 @@ internal static class CsSigRecognizer
         /// comparison captures all of these as part of the member's virtuality.
         /// </summary>
         private static ReadOnlySpan<SyntaxKind> MemberModifiers =>
-        [
-            SyntaxKind.StaticKeyword,
-            SyntaxKind.VirtualKeyword,
-            SyntaxKind.AbstractKeyword,
-            SyntaxKind.OverrideKeyword,
-            SyntaxKind.SealedKeyword,
-        ];
+            [
+                SyntaxKind.StaticKeyword,
+                SyntaxKind.VirtualKeyword,
+                SyntaxKind.AbstractKeyword,
+                SyntaxKind.OverrideKeyword,
+                SyntaxKind.SealedKeyword,
+            ];
 
         // Members that can be 'readonly' on a struct (the modifier makes the member readonly,
         // turning `this` into an `in` parameter — observable in both source and binary).
         private static ReadOnlySpan<SyntaxKind> ReadonlyMemberModifiers =>
-        [
-            SyntaxKind.StaticKeyword,
-            SyntaxKind.VirtualKeyword,
-            SyntaxKind.AbstractKeyword,
-            SyntaxKind.OverrideKeyword,
-            SyntaxKind.SealedKeyword,
-            SyntaxKind.ReadOnlyKeyword,
-        ];
+            [
+                SyntaxKind.StaticKeyword,
+                SyntaxKind.VirtualKeyword,
+                SyntaxKind.AbstractKeyword,
+                SyntaxKind.OverrideKeyword,
+                SyntaxKind.SealedKeyword,
+                SyntaxKind.ReadOnlyKeyword,
+            ];
 
         /// <summary>
         /// Rejects every modifier that is not accessibility (always allowed, since it determines
         /// surface membership) or one of the <paramref name="allowed"/> modifiers known to affect
         /// the signature for this declaration kind.
         /// </summary>
-        private void CheckModifiers(SyntaxTokenList modifiers, params ReadOnlySpan<SyntaxKind> allowed)
+        private void CheckModifiers(
+            SyntaxTokenList modifiers,
+            params ReadOnlySpan<SyntaxKind> allowed
+        )
         {
             var hasProtected = modifiers.Any(SyntaxKind.ProtectedKeyword);
 

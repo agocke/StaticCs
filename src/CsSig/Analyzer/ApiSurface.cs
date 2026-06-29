@@ -48,7 +48,10 @@ internal static class ApiSurface
     /// declaration rather than the real project. On the declaration side an implicitly synthesized
     /// parameterless constructor is a body-less artifact of the signature file (the writer emits
     /// accessible parameterless constructors explicitly), not a real declaration, so it is ignored.</param>
-    public static Dictionary<MemberIdentity, ApiEntry> Collect(IAssemblySymbol assembly, bool isDeclaration)
+    public static Dictionary<MemberIdentity, ApiEntry> Collect(
+        IAssemblySymbol assembly,
+        bool isDeclaration
+    )
     {
         var map = new Dictionary<MemberIdentity, ApiEntry>();
 
@@ -91,7 +94,11 @@ internal static class ApiSurface
 
     /// <summary>Yields the tracked members of <paramref name="type"/>, including implicit
     /// constructors and implicit record members, mirroring the Public API analyzer.</summary>
-    private static void AddApiMembers(INamedTypeSymbol type, Action<ISymbol> add, bool isDeclaration)
+    private static void AddApiMembers(
+        INamedTypeSymbol type,
+        Action<ISymbol> add,
+        bool isDeclaration
+    )
     {
         foreach (var member in type.GetMembers())
         {
@@ -189,13 +196,14 @@ internal static class ApiSurface
     /// expose a public parameterless constructor on both sides, so they are unaffected.</summary>
     private static bool SkipSynthesizedConstructor(ISymbol member, bool isDeclaration) =>
         isDeclaration
-        && member is IMethodSymbol
-        {
-            MethodKind: MethodKind.Constructor,
-            IsImplicitlyDeclared: true,
-            Parameters.IsEmpty: true,
-            ContainingType.TypeKind: TypeKind.Class,
-        };
+        && member
+            is IMethodSymbol
+            {
+                MethodKind: MethodKind.Constructor,
+                IsImplicitlyDeclared: true,
+                Parameters.IsEmpty: true,
+                ContainingType.TypeKind: TypeKind.Class,
+            };
 
     private static List<INamedTypeSymbol> AllNamedTypes(INamespaceSymbol root)
     {

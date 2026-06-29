@@ -496,7 +496,10 @@ internal sealed record ApiMember(MemberIdentity Identity, SourceMember Source, B
         // bodies. The same applies to `static abstract` vs `static virtual` members. So the
         // virtuality of an interface's own members is unobservable through this format — normalize
         // it away (keeping static-ness) so the written form and the original symbol compare equal.
-        if (symbol is { Kind: not SymbolKind.NamedType, ContainingType.TypeKind: TypeKind.Interface })
+        if (
+            symbol is
+            { Kind: not SymbolKind.NamedType, ContainingType.TypeKind: TypeKind.Interface }
+        )
         {
             flags &= ~(
                 MemberFlags.Virtual
