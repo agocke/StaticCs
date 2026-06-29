@@ -1090,6 +1090,34 @@ public class CsSigTests
     }
 
     [Fact]
+    public async Task MissingObsoleteAttributeReported()
+    {
+        var source = """
+            namespace N;
+            public class C()
+            {
+                [System.Obsolete]
+                public int M() => 0;
+            }
+            """;
+        var sig = """
+            namespace N;
+            public class C()
+            {
+                public int M();
+            }
+            """;
+
+        // The project member is [Obsolete] but the .cssig declares it without: a source-only
+        // mismatch, since the attribute is erased in metadata.
+        var diagnostic = Assert.Single(await RunAsync(source, sig));
+        Assert.Equal("CSSIG005", diagnostic.Id);
+        Assert.Contains("source equivalence", diagnostic.GetMessage());
+        // Binary-only equivalence ignores [Obsolete].
+        Assert.Empty(await RunWithEquivalenceAsync(source, "Binary", sig));
+    }
+
+    [Fact]
     public async Task RoundTripRecordWithExplicitAndExtraMembers()
     {
         // A positional record that also declares an explicitly-overriding positional property, an
