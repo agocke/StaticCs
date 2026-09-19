@@ -98,10 +98,7 @@ public abstract class PathRoot : IDisposable
 
     private protected abstract IEnumerable<string> EnumerateDirectory(nint directory);
 
-    private protected abstract PathRoot CreatePlatformRoot(
-        SafeFileHandle rootHandle,
-        string name
-    );
+    private protected abstract PathRoot CreatePlatformRoot(SafeFileHandle rootHandle, string name);
 
     private protected abstract bool IsAlreadyExists(Exception exception);
 
@@ -137,8 +134,8 @@ public abstract class PathRoot : IDisposable
     /// <param name="access">The access requested for the file.</param>
     /// <returns>The opened file stream.</returns>
     /// <remarks>The file is opened with <see cref="FileShare.None"/>.</remarks>
-    public FileStream OpenFile(string path, FileMode mode, FileAccess access)
-        => OpenFile(path, mode, access, FileShare.None);
+    public FileStream OpenFile(string path, FileMode mode, FileAccess access) =>
+        OpenFile(path, mode, access, FileShare.None);
 
     /// <summary>
     /// Opens a file relative to this root.
@@ -150,12 +147,7 @@ public abstract class PathRoot : IDisposable
     /// The access that other file handles may request while the file is open.
     /// </param>
     /// <returns>The opened file stream.</returns>
-    public FileStream OpenFile(
-        string path,
-        FileMode mode,
-        FileAccess access,
-        FileShare share
-    )
+    public FileStream OpenFile(string path, FileMode mode, FileAccess access, FileShare share)
     {
         ValidateOpenArguments(mode, access, share);
         SafeFileHandle handle = Resolve(
@@ -171,13 +163,7 @@ public abstract class PathRoot : IDisposable
                     );
                 }
 
-                return state.Root.OpenFileAt(
-                    parent,
-                    name,
-                    state.Mode,
-                    state.Access,
-                    state.Share
-                );
+                return state.Root.OpenFileAt(parent, name, state.Mode, state.Access, state.Share);
             }
         );
 
@@ -499,8 +485,7 @@ public abstract class PathRoot : IDisposable
     /// This method does nothing if the final file does not exist. It throws if
     /// an intermediate directory does not exist.
     /// </remarks>
-    public void DeleteFile(string path)
-        => Delete(path, recursive: false, isDirectory: false);
+    public void DeleteFile(string path) => Delete(path, recursive: false, isDirectory: false);
 
     /// <summary>
     /// Deletes an empty directory relative to this root.
@@ -805,7 +790,7 @@ public abstract class PathRoot : IDisposable
 
     private static void NormalizeDotDot(List<string> parts, string path)
     {
-        for (int index = 0; index < parts.Count;)
+        for (int index = 0; index < parts.Count; )
         {
             if (parts[index] != "..")
             {
@@ -828,11 +813,7 @@ public abstract class PathRoot : IDisposable
         }
     }
 
-    private static void ValidateOpenArguments(
-        FileMode mode,
-        FileAccess access,
-        FileShare share
-    )
+    private static void ValidateOpenArguments(FileMode mode, FileAccess access, FileShare share)
     {
         if (mode is < FileMode.CreateNew or > FileMode.Append)
         {
