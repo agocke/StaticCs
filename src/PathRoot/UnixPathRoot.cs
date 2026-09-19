@@ -131,6 +131,31 @@ internal sealed class UnixPathRoot : PathRoot
         }
     }
 
+    private protected override void CreateHardLinkAt(
+        nint parent,
+        string path,
+        nint targetParent,
+        string pathToTarget
+    )
+    {
+        int result;
+        do
+        {
+            result = NativeMethods.LinkAt(
+                targetParent.ToInt32(),
+                pathToTarget,
+                parent.ToInt32(),
+                path,
+                0
+            );
+        } while (result < 0 && Marshal.GetLastPInvokeError() == NativeErrors.Interrupted);
+
+        if (result != 0)
+        {
+            throw NativeError("linkat", path);
+        }
+    }
+
     private protected override string GetSymbolicLinkTargetAt(nint parent, string name)
     {
         if (TryGetLinkTarget(parent, name, out string? target, out int error))
@@ -620,6 +645,21 @@ internal sealed class UnixPathRoot : PathRoot
             string target,
             int newDirectory,
             string newPath
+        );
+
+        [DllImport(
+            LibC,
+            EntryPoint = "linkat",
+            SetLastError = true,
+            CharSet = CharSet.Ansi,
+            ExactSpelling = true
+        )]
+        internal static safe extern int LinkAt(
+            int oldDirectory,
+            string oldPath,
+            int newDirectory,
+            string newPath,
+            int flags
         );
 
         [DllImport(

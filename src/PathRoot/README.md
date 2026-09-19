@@ -23,8 +23,12 @@ using FileStream stream = output.CreateFile("result.txt");
 
 The API uses file- and directory-specific .NET-style names, including
 `CreateDirectory`, `CreateSubRoot`, `CreateFileSymbolicLink`,
-`CreateDirectorySymbolicLink`, `MoveFile`, `MoveDirectory`, `DeleteFile`,
-`DeleteDirectory`, and `GetSymbolicLinkTarget`.
+`CreateDirectorySymbolicLink`, `CreateHardLink`, `MoveFile`, `MoveDirectory`,
+`DeleteFile`, `DeleteDirectory`, and `GetSymbolicLinkTarget`.
+
+Both paths passed to `CreateHardLink` are relative to the root. The target must
+be on the same filesystem as the new link. If the target is a symbolic link,
+the hard link refers to the symbolic link itself rather than traversing it.
 
 The root remains attached to the directory that was opened even if that
 directory is subsequently renamed. Operations may traverse mount points and

@@ -147,6 +147,92 @@ public sealed class PathRootTests : IDisposable
     }
 
     [Fact]
+    public void CreatesHardLinksRelativeToRoot()
+    {
+        using PathRoot root = PathRoot.Open(_testDirectory);
+        root.CreateDirectory("links");
+        File.WriteAllText(Path.Combine(_testDirectory, "target.txt"), "original");
+
+        root.CreateHardLink("links/link.txt", "target.txt");
+        root.CreateHardLink("x", "target.txt");
+        File.WriteAllText(Path.Combine(_testDirectory, "links", "link.txt"), "changed");
+
+        Assert.Equal("changed", File.ReadAllText(Path.Combine(_testDirectory, "target.txt")));
+        Assert.Equal("changed", File.ReadAllText(Path.Combine(_testDirectory, "x")));
+        root.DeleteFile("target.txt");
+        Assert.Equal(
+            "changed",
+            File.ReadAllText(Path.Combine(_testDirectory, "links", "link.txt"))
+        );
+    }
+
+    [Fact]
+    public void HardLinkPathsCannotEscapeRoot()
+    {
+        string outsideDirectory = CreateOutsideDirectory();
+        string outsideFile = Path.Combine(outsideDirectory, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+
+        using PathRoot root = PathRoot.Open(_testDirectory);
+        File.WriteAllText(Path.Combine(_testDirectory, "target.txt"), "target");
+        root.CreateDirectorySymbolicLink("escape", outsideDirectory);
+
+        Assert.Throws<IOException>(() => root.CreateHardLink("escape/link.txt", "target.txt"));
+        Assert.Throws<IOException>(() => root.CreateHardLink("link.txt", "escape/outside.txt"));
+        Assert.Throws<IOException>(() => root.CreateHardLink("../link.txt", "target.txt"));
+        Assert.Throws<IOException>(() => root.CreateHardLink("link.txt", "../outside.txt"));
+        Assert.False(File.Exists(Path.Combine(outsideDirectory, "link.txt")));
+        Assert.False(File.Exists(Path.Combine(_testDirectory, "link.txt")));
+    }
+
+    [Fact]
+    public void HardLinkRequiresExistingFileAndNewDestination()
+    {
+        using PathRoot root = PathRoot.Open(_testDirectory);
+        root.CreateDirectory("directory");
+        File.WriteAllText(Path.Combine(_testDirectory, "target.txt"), "target");
+        File.WriteAllText(Path.Combine(_testDirectory, "existing.txt"), "existing");
+
+        Assert.ThrowsAny<IOException>(() => root.CreateHardLink("link.txt", "missing.txt"));
+        Assert.ThrowsAny<IOException>(() => root.CreateHardLink("link.txt", "directory"));
+        Assert.ThrowsAny<IOException>(() => root.CreateHardLink("existing.txt", "target.txt"));
+    }
+
+    [Fact]
+    public void CreatesHardLinkWhileTargetIsOpenWithoutDeleteSharing()
+    {
+        string targetPath = Path.Combine(_testDirectory, "target.txt");
+        File.WriteAllText(targetPath, "target");
+
+        using PathRoot root = PathRoot.Open(_testDirectory);
+        using FileStream target = File.Open(
+            targetPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read
+        );
+
+        root.CreateHardLink("link.txt", "target.txt");
+
+        Assert.Equal("target", File.ReadAllText(Path.Combine(_testDirectory, "link.txt")));
+    }
+
+    [Fact]
+    public void HardLinkToSymbolicLinkDoesNotTraverseTarget()
+    {
+        string outsideDirectory = CreateOutsideDirectory();
+        string outsideFile = Path.Combine(outsideDirectory, "outside.txt");
+        File.WriteAllText(outsideFile, "outside");
+
+        using PathRoot root = PathRoot.Open(_testDirectory);
+        root.CreateFileSymbolicLink("symbolic-link", outsideFile);
+        root.CreateHardLink("hard-link", "symbolic-link");
+
+        Assert.Equal(outsideFile, root.GetSymbolicLinkTarget("hard-link"));
+        Assert.Throws<IOException>(() => root.OpenRead("hard-link"));
+    }
+
+    [Fact]
     public void OpeningRootFollowsTheInitialSymbolicLink()
     {
         string linkPath = _testDirectory + "-link";
@@ -240,6 +326,8 @@ public sealed class PathRootTests : IDisposable
         Assert.Throws<IOException>(() => root.DeleteFile("source.txt/"));
         Assert.Throws<IOException>(() => root.MoveFile("source.txt/", "destination.txt"));
         Assert.Throws<IOException>(() => root.MoveFile("source.txt", "destination.txt/"));
+        Assert.Throws<IOException>(() => root.CreateHardLink("link.txt/", "source.txt"));
+        Assert.Throws<IOException>(() => root.CreateHardLink("link.txt", "source.txt/"));
 
         Assert.True(File.Exists(Path.Combine(_testDirectory, "source.txt")));
         Assert.False(File.Exists(Path.Combine(_testDirectory, "destination.txt")));
