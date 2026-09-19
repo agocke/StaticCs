@@ -325,6 +325,49 @@ internal sealed class WindowsPathRoot : PathRoot
         });
     }
 
+    private protected override void CreateHardLinkAt(
+        nint parent,
+        string path,
+        nint targetParent,
+        string pathToTarget
+    )
+    {
+        using SafeFileHandle target = OpenRelative(
+            targetParent,
+            pathToTarget,
+            desiredAccess: 0,
+            disposition: NativeConstants.FileOpen,
+            options: NativeConstants.FileOpenReparsePoint
+                | NativeConstants.FileOpenForBackupIntent
+                | NativeConstants.FileNonDirectoryFile,
+            preventReparse: false,
+            followSymbolicLink: false
+        );
+        byte[] information = CreateNameInformation(
+            firstValue: 0,
+            firstValueIsUInt32: false,
+            parent,
+            path
+        );
+
+        int status;
+        unsafe
+        {
+            fixed (byte* informationPointer = information)
+            {
+                status = NativeMethods.NtSetInformationFile(
+                    target,
+                    out _,
+                    informationPointer,
+                    (uint)information.Length,
+                    NativeConstants.FileLinkInformation
+                );
+            }
+        }
+
+        ThrowIfFailed(status, "NtSetInformationFile(FileLinkInformation)", path);
+    }
+
     private protected override string GetSymbolicLinkTargetAt(nint parent, string name)
     {
         using SafeFileHandle handle = OpenEntry(
@@ -1017,7 +1060,8 @@ internal sealed class WindowsPathRoot : PathRoot
         int lengthOffset = rootOffset + IntPtr.Size;
         int nameOffset = lengthOffset + sizeof(uint);
         byte[] nameBytes = Encoding.Unicode.GetBytes(name);
-        byte[] information = new byte[nameOffset + nameBytes.Length];
+        int minimumLength = nameOffset + sizeof(uint);
+        byte[] information = new byte[Math.Max(minimumLength, nameOffset + nameBytes.Length)];
         Span<byte> span = information;
 
         if (firstValueIsUInt32)
@@ -1398,6 +1442,7 @@ internal sealed class WindowsPathRoot : PathRoot
         internal const uint FileEndOfFileInfo = 6;
         internal const uint FileAttributeTagInfo = 9;
         internal const uint FileRenameInformation = 10;
+        internal const uint FileLinkInformation = 11;
         internal const uint FileDispositionInformation = 13;
         internal const uint FileDispositionInformationEx = 64;
         internal const uint FileRenameInformationEx = 65;

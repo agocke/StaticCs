@@ -79,6 +79,13 @@ public abstract class PathRoot : IDisposable
         bool targetIsDirectory
     );
 
+    private protected abstract void CreateHardLinkAt(
+        nint parent,
+        string path,
+        nint targetParent,
+        string pathToTarget
+    );
+
     private protected abstract string GetSymbolicLinkTargetAt(nint parent, string name);
 
     private protected abstract void MoveAt(
@@ -339,6 +346,67 @@ public abstract class PathRoot : IDisposable
                     state.TargetIsDirectory
                 );
                 return 0;
+            }
+        );
+    }
+
+    /// <summary>
+    /// Creates a hard link to an existing file relative to this root.
+    /// </summary>
+    /// <param name="path">The path of the new hard link, relative to this root.</param>
+    /// <param name="pathToTarget">
+    /// The path of the existing file, relative to this root.
+    /// </param>
+    /// <remarks>
+    /// Both paths are confined to this root. The target must be on the same
+    /// filesystem as the new link. If the target is a symbolic link, the hard
+    /// link refers to the symbolic link itself rather than its target.
+    /// </remarks>
+    public void CreateHardLink(string path, string pathToTarget)
+    {
+        ValidatePathArgument(path, nameof(path));
+        ValidatePathArgument(pathToTarget, nameof(pathToTarget));
+
+        Resolve(
+            pathToTarget,
+            createParents: false,
+            (Root: this, Path: path, PathToTarget: pathToTarget),
+            static (state, targetParent, targetName, targetEndsInSeparator) =>
+            {
+                if (targetEndsInSeparator)
+                {
+                    throw new IOException(
+                        $"The hard-link target path '{state.PathToTarget}' ends in a directory separator."
+                    );
+                }
+
+                return state.Root.Resolve(
+                    state.Path,
+                    createParents: false,
+                    (
+                        Root: state.Root,
+                        Path: state.Path,
+                        TargetParent: targetParent,
+                        TargetName: targetName
+                    ),
+                    static (linkState, parent, name, endsInSeparator) =>
+                    {
+                        if (endsInSeparator)
+                        {
+                            throw new IOException(
+                                $"The hard-link path '{linkState.Path}' ends in a directory separator."
+                            );
+                        }
+
+                        linkState.Root.CreateHardLinkAt(
+                            parent,
+                            name,
+                            linkState.TargetParent,
+                            linkState.TargetName
+                        );
+                        return 0;
+                    }
+                );
             }
         );
     }
