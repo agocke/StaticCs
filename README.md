@@ -68,3 +68,9 @@ An analyzer that pins a project's public API surface using `.cssig` files — or
 declarations with no bodies. The analyzer enforces that the project's public API exactly matches the
 declared signatures, in both directions (like the Roslyn Public API analyzer, but using real C#
 instead of a flat text format). See [the CsSig README.md](src/CsSig/README.md) for more info.
+
+### StaticCs.PathRoot
+
+A handle-based filesystem API that confines relative path operations to an open directory, including
+when paths contain symbolic links or are changed concurrently. See
+[the PathRoot README.md](src/PathRoot/README.md) for more info.

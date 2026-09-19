@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/PathRoot/StaticCs.PathRoot.csproj" />
     <ProjectReference Include="../../src/Collections/StaticCs.Collections.csproj" />
     <ProjectReference Include="../../src/Async/StaticCs.Async.csproj" />
     <ProjectReference Include="../../src/StaticCs/StaticCs.csproj" />

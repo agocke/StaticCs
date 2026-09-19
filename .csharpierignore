@@ -1,0 +1,3 @@
+# CSharpier 1.3 does not yet parse the preview C# safe modifier.
+/src/PathRoot/UnixPathRoot.cs
+/src/PathRoot/WindowsPathRoot.cs
