@@ -37,7 +37,7 @@ namespace StaticCs
     /// Manages indentation levels with <see cref="Indent"/> and <see cref="Dedent"/> methods,
     /// and automatically applies the current indentation to appended content and interpolated strings.
     /// </summary>
-    public sealed class IndentingBuilder
+    internal sealed class IndentingBuilder
         : IComparable<IndentingBuilder>,
             IEquatable<IndentingBuilder>
     {
