@@ -514,10 +514,24 @@ internal sealed class UnixPathRoot : PathRoot
         internal static readonly int CloseOnExec = OperatingSystem.IsMacOS()
             ? 0x01000000
             : 0x00080000;
-        internal static readonly int Directory = OperatingSystem.IsMacOS()
-            ? 0x00100000
+        // On Linux, arm, arm64, and powerpc use different values for O_DIRECTORY and O_NOFOLLOW
+        // than other architectures do. On arm64, the other values mean O_DIRECT and O_LARGEFILE,
+        // and opening a directory with O_DIRECT fails with EINVAL.
+        private static readonly bool LinuxArmOrPowerPC =
+            OperatingSystem.IsLinux()
+            && RuntimeInformation.ProcessArchitecture
+                is Architecture.Arm
+                    or Architecture.Arm64
+                    or Architecture.Ppc64le;
+
+        internal static readonly int Directory =
+            OperatingSystem.IsMacOS() ? 0x00100000
+            : LinuxArmOrPowerPC ? 0x00004000
             : 0x00010000;
-        internal static readonly int NoFollow = OperatingSystem.IsMacOS() ? 0x00000100 : 0x00020000;
+        internal static readonly int NoFollow =
+            OperatingSystem.IsMacOS() ? 0x00000100
+            : LinuxArmOrPowerPC ? 0x00008000
+            : 0x00020000;
         internal static readonly int RemoveDirectory = OperatingSystem.IsMacOS() ? 0x0080 : 0x0200;
         internal static readonly int CurrentWorkingDirectory = OperatingSystem.IsMacOS()
             ? -2
